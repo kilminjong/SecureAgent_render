@@ -1,0 +1,2011 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SecureAgent v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ── 라이트 모드 (기본) ── */
+:root{
+  --ink:#0A1628;--ink2:#111E33;--ink3:#1A2D47;
+  --blue:#2563EB;--blue2:#1D4ED8;--bluebg:#EFF6FF;--bluebd:#BFDBFE;
+  --green:#059669;--greenbg:#ECFDF5;--greenbd:#A7F3D0;
+  --amber:#D97706;--amberbg:#FFFBEB;--amberbd:#FDE68A;
+  --red:#DC2626;--redbg:#FEF2F2;--redbd:#FECACA;
+  --g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;--g300:#CBD5E1;
+  --g400:#94A3B8;--g500:#64748B;--g600:#475569;--g700:#334155;--g800:#1E293B;
+  /* 테마 변수 */
+  --bg-page:#E8EEF7;
+  --bg-card:#ffffff;--bg-card2:#F8FAFC;
+  --border:#E2E8F0;--border2:#F1F5F9;
+  --txt-primary:#1E293B;--txt-sub:#475569;--txt-muted:#94A3B8;
+  --q-panel-bg:#ffffff;--q-item-hover:#EFF6FF;--q-item-color:#475569;
+  --input-bar-bg:#ffffff;--input-box-bg:#F8FAFC;
+  --pipe-bg:#111E33;
+  --report-hdr:#F8FAFC;
+  --proc-toggle:#F8FAFC;--proc-toggle-hover:#F1F5F9;
+  --hint-color:#94A3B8;
+}
+/* ── 다크 모드 ── */
+[data-theme="dark"]{
+  --bg-page:#0A1628;
+  --bg-card:#111E33;--bg-card2:#1A2D47;
+  --border:#1E3A5F;--border2:#1A2D47;
+  --txt-primary:#E2E8F0;--txt-sub:#94A3B8;--txt-muted:#64748B;
+  --q-panel-bg:#111E33;--q-item-hover:rgba(37,99,235,.15);--q-item-color:#94A3B8;
+  --input-bar-bg:#111E33;--input-box-bg:rgba(255,255,255,.04);
+  --pipe-bg:#070F1E;
+  --report-hdr:#1A2D47;
+  --proc-toggle:#1A2D47;--proc-toggle-hover:#1E3A5F;
+  --hint-color:#64748B;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg-page);color:var(--txt-primary);transition:background .25s,color .2s;height:100vh;overflow:hidden;font-size:14px;line-height:1.6;}
+
+/* ── API 키 모달 ── */
+.key-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:2000;display:flex;align-items:center;justify-content:center;}
+.key-overlay.hidden{display:none;}
+.key-modal{background:var(--ink2);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:36px;width:440px;max-width:92vw;box-shadow:0 32px 80px rgba(0,0,0,.6);}
+.key-modal-ico{width:48px;height:48px;background:linear-gradient(135deg,var(--blue),#7C3AED);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
+.key-modal-ico svg{width:24px;height:24px;stroke:white;fill:none;stroke-width:1.8;}
+.key-modal-t{font-size:18px;font-weight:800;color:white;margin-bottom:8px;}
+.key-modal-d{font-size:13px;color:rgba(255,255,255,.4);line-height:1.7;margin-bottom:24px;}
+.key-input-wrap{position:relative;margin-bottom:14px;}
+.key-input{width:100%;padding:12px 46px 12px 16px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);border-radius:9px;color:white;font-size:13px;font-family:monospace;outline:none;transition:border-color .15s;}
+.key-input:focus{border-color:var(--blue);}
+.key-input::placeholder{color:rgba(255,255,255,.2);}
+.key-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:rgba(255,255,255,.3);font-size:16px;user-select:none;}
+.key-save-btn{width:100%;padding:13px;background:var(--blue);border:none;border-radius:9px;color:white;font-size:14px;font-weight:700;cursor:pointer;transition:background .13s;font-family:inherit;}
+.key-save-btn:hover{background:var(--blue2);}
+.key-saved-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:8px;}
+.key-saved-txt{font-size:12px;color:#34D399;font-weight:600;}
+.key-change-btn{font-size:11px;color:rgba(255,255,255,.35);background:none;border:none;cursor:pointer;font-family:inherit;}
+.key-change-btn:hover{color:white;}
+
+/* ── 페이지 ── */
+.page{display:none;height:100vh;}
+.page.active{display:flex;flex-direction:column;height:100vh;}
+
+/* ════ MAIN 페이지 ════ */
+#pagMain{background:var(--main-bg);transition:background .25s;position:relative;overflow-y:auto;align-items:center;justify-content:center;flex:1;}
+#pagMain::before{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--main-grid) 1px,transparent 1px),linear-gradient(90deg,var(--main-grid) 1px,transparent 1px);background-size:56px 56px;mask-image:radial-gradient(ellipse 80% 70% at 50% 50%,black 20%,transparent 100%);}
+.glow{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;}
+.glow1{width:600px;height:600px;background:rgba(37,99,235,.13);top:-150px;left:-150px;}
+.glow2{width:450px;height:450px;background:rgba(124,58,237,.1);bottom:-100px;right:-100px;}
+.glow3{width:350px;height:350px;background:rgba(34,211,165,.07);top:35%;left:55%;}
+.main-wrap{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;padding:60px 24px 50px;width:100%;max-width:800px;}
+
+.main-logo{display:flex;align-items:center;gap:12px;margin-bottom:52px;}
+.logo-mark{width:54px;height:54px;background:linear-gradient(135deg,var(--blue),#7C3AED);border-radius:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(37,99,235,.45);}
+.logo-mark svg{width:28px;height:28px;fill:white;}
+.logo-name{font-size:30px;font-weight:900;color:var(--logo-name-c);letter-spacing:-1px;}
+.logo-ver{font-size:11px;font-weight:700;color:var(--logo-ver-color);background:var(--logo-ver-bg);border:1px solid var(--logo-ver-border);padding:3px 8px;border-radius:4px;align-self:flex-end;margin-bottom:5px;}
+
+.main-headline{font-size:clamp(26px,4.5vw,50px);font-weight:900;color:var(--main-headline);text-align:center;line-height:1.15;letter-spacing:-1.5px;margin-bottom:14px;}
+.hl{background:linear-gradient(135deg,#60A5FA,#A78BFA);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.main-sub{font-size:15px;color:var(--main-sub);text-align:center;line-height:1.8;margin-bottom:44px;max-width:520px;}
+
+.main-search{width:100%;max-width:620px;margin-bottom:20px;}
+.search-box{display:flex;align-items:center;background:var(--search-bg);border:1.5px solid var(--search-border);border-radius:14px;padding:7px 7px 7px 20px;gap:10px;transition:border-color .15s;backdrop-filter:blur(12px);}
+.search-box:focus-within{border-color:rgba(37,99,235,.6);box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+.search-box svg{width:19px;height:19px;stroke:var(--search-icon-c);fill:none;flex-shrink:0;}
+.search-inp{flex:1;background:none;border:none;outline:none;color:var(--search-color);font-size:15px;font-family:inherit;padding:8px 0;}
+.search-inp::placeholder{color:var(--search-ph);}
+.search-btn{padding:11px 24px;background:var(--blue);border:none;border-radius:10px;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .13s;white-space:nowrap;}
+.search-btn:hover{background:var(--blue2);transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,99,235,.4);}
+
+.chips-label{font-size:11px;font-weight:700;color:var(--chips-lbl);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
+.main-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;max-width:680px;}
+.main-chip{padding:6px 15px;background:var(--chip-bg);border:1px solid var(--chip-border);border-radius:20px;font-size:12px;color:var(--chip-color);cursor:pointer;transition:all .13s;}
+.main-chip:hover{background:rgba(37,99,235,.2);border-color:rgba(37,99,235,.45);color:white;}
+
+.main-feats{display:flex;gap:28px;margin-top:52px;flex-wrap:wrap;justify-content:center;}
+.feat{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--feat-color);}
+.feat-dot{width:6px;height:6px;border-radius:50%;}
+.fd-blue{background:#60A5FA;}.fd-green{background:#34D399;}.fd-purple{background:#A78BFA;}
+
+/* ════ ANALYSIS 페이지 ════ */
+#pagAnalysis{
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  overflow:hidden;
+  background:var(--bg-page);
+}
+.hdr{
+  background:var(--ink);
+  height:54px;
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  padding:0 20px;
+  justify-content:space-between;
+  z-index:400;
+  box-shadow:0 2px 20px rgba(0,0,0,.4);
+  flex-shrink:0;
+}
+.hdr-l{display:flex;align-items:center;gap:9px;}
+.hdr-back{width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .13s;}
+.hdr-back:hover{background:rgba(255,255,255,.12);}
+.hdr-back svg{width:14px;height:14px;stroke:rgba(255,255,255,.6);fill:none;stroke-width:2.5;}
+.hdr-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--blue),#7C3AED);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.hdr-mark svg{width:14px;height:14px;fill:white;}
+.hdr-name{font-size:15px;font-weight:800;color:white;letter-spacing:-.3px;}
+.hdr-ver{font-size:9px;font-weight:700;color:rgba(255,255,255,.3);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);padding:2px 6px;border-radius:3px;}
+.hdr-r{display:flex;align-items:center;gap:10px;}
+.hdr-key-btn{padding:5px 13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:rgba(255,255,255,.45);font-size:11px;font-weight:600;cursor:pointer;transition:all .13s;font-family:inherit;}
+.hdr-key-btn:hover{background:rgba(255,255,255,.1);color:white;}
+.hdr-key-btn.set{border-color:rgba(52,211,153,.35);color:#34D399;background:rgba(52,211,153,.07);}
+.hdr-online{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.3);}
+.hdr-dot{width:5px;height:5px;border-radius:50%;background:#22D3A5;box-shadow:0 0 6px rgba(34,211,165,.5);}
+
+/* 헤더 아래 나머지 영역 — 왼쪽패널 + 오른쪽콘텐츠 */
+.analysis-layout{
+  display:flex;
+  flex:1;
+  overflow:hidden;
+  min-height:0;
+  height:calc(100vh - 54px);
+}
+
+/* 왼쪽 질문 패널 — 전체 높이, 내부만 스크롤 */
+.q-panel{
+  width:270px;
+  flex-shrink:0;
+  background:var(--q-panel-bg);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  transition:background .25s;
+  position:relative;
+  z-index:10;
+}
+.q-panel-hdr{padding:14px 14px 10px;border-bottom:1px solid var(--border2);background:var(--q-panel-bg);flex-shrink:0;}
+.q-panel-ttl{font-size:10px;font-weight:800;color:var(--txt-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
+.q-search{display:flex;align-items:center;gap:7px;padding:7px 11px;background:var(--input-box-bg);border:1.5px solid var(--border);border-radius:8px;transition:border-color .13s;}
+.q-search:focus-within{border-color:var(--bluebd);}
+.q-search svg{width:12px;height:12px;stroke:var(--g400);fill:none;flex-shrink:0;}
+.q-search-inp{flex:1;background:none;border:none;outline:none;font-size:12px;color:var(--txt-primary);font-family:inherit;}
+.q-search-inp::placeholder{color:var(--g400);}
+.q-list{flex:1;overflow-y:auto;padding:8px;}
+.q-item:hover{background:var(--q-item-hover);color:var(--blue);}
+.q-item.active{background:var(--blue);color:white;font-weight:700;}
+/* 질문 아이템 내부 구조 */
+.q-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:7px;font-size:12px;font-weight:500;color:var(--q-item-color);cursor:pointer;transition:all .12s;margin-bottom:2px;line-height:1.4;}
+.q-item-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.q-item-del{flex-shrink:0;width:18px;height:18px;background:none;border:none;color:var(--txt-muted);font-size:15px;line-height:1;cursor:pointer;border-radius:4px;padding:0;display:none;font-family:inherit;}
+.q-item:hover .q-item-del{display:flex;align-items:center;justify-content:center;}
+.q-item.active .q-item-del{display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);}
+.q-item-del:hover{background:rgba(220,38,38,.15);color:#DC2626;}
+.q-item.active .q-item-del:hover{background:rgba(255,255,255,.2);color:white;}
+/* 빈 상태 */
+.q-empty-hint{padding:20px 14px;font-size:11px;color:var(--txt-muted);text-align:center;line-height:1.6;}
+/* ── 패널 탭 바 ── */
+.q-tab-bar{display:flex;flex-shrink:0;border-bottom:2px solid var(--border);}
+.q-tab-btn{flex:1;padding:11px 6px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:12px;font-weight:700;color:var(--txt-muted);cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px;}
+.q-tab-btn:hover{color:var(--txt-primary);background:var(--q-item-hover);}
+.q-tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);}
+.q-tab-bm-cnt{font-size:10px;font-weight:700;background:#FEF3C7;color:#D97706;border:1px solid #FDE68A;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center;line-height:1.4;}
+[data-theme="dark"] .q-tab-bm-cnt{background:rgba(217,119,6,.15);border-color:rgba(217,119,6,.3);color:#FBBF24;}
+.q-tab-btn.active .q-tab-bm-cnt{background:var(--bluebg);color:var(--blue);border-color:var(--bluebd);}
+/* ── 탭 패널 ── */
+.q-tab-pane{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
+.q-tab-pane.hidden{display:none;}
+.q-search-wrap{padding:10px 10px 8px;border-bottom:1px solid var(--border2);flex-shrink:0;}
+/* 북마크 탭 리스트 */
+.q-bm-list{flex:1;overflow-y:auto;padding:8px;}
+.q-bm-empty{padding:24px 14px;font-size:11px;color:var(--txt-muted);text-align:center;line-height:1.8;}
+/* 최근질문 별 표시 */
+.q-item-bm{font-size:11px;color:#F59E0B;flex-shrink:0;margin-right:2px;line-height:1;}
+.q-item-bm.hidden{display:none;}
+/* 패널 하단 */
+.q-panel-footer{padding:8px 10px;border-top:1px solid var(--border2);flex-shrink:0;}
+.q-clear-btn{width:100%;padding:6px;background:none;border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--txt-muted);cursor:pointer;font-family:inherit;transition:all .13s;}
+.q-clear-btn:hover{background:var(--redbg);border-color:var(--redbd);color:var(--red);}
+
+/* 오른쪽 콘텐츠 — 파이프라인(고정) + 채팅(스크롤) + 입력창(고정) */
+.main-content{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:0;
+  overflow:hidden;
+  height:100%;
+}
+
+/* 파이프라인 — 고정 */
+.pipe{display:flex;align-items:center;gap:4px;padding:7px 16px;background:var(--pipe-bg);flex-shrink:0;transition:background .25s;}
+.ps{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:rgba(255,255,255,.2);border:1px solid transparent;transition:all .18s;}
+.ps .pd{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.1);flex-shrink:0;}
+.ps.active{color:#fff;background:rgba(37,99,235,.3);border-color:rgba(37,99,235,.5);}
+.ps.active .pd{background:var(--blue);box-shadow:0 0 5px var(--blue);}
+.ps.done{color:#6EE7B7;}.ps.done .pd{background:#22D3A5;}
+.pa{color:rgba(255,255,255,.1);font-size:10px;}
+
+/* 대화 — 남은 공간 채우기 + 스크롤 */
+.chat-area{flex:1;overflow-y:auto;padding:18px 20px 16px;display:block;min-height:0;}
+.chat-area > *{margin-bottom:14px;}
+.chat-area > *:last-child{margin-bottom:0;}
+.chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:60px 24px;width:100%;}
+.chat-empty-ico{width:54px;height:54px;background:linear-gradient(135deg,var(--ink),var(--ink3));border-radius:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.12);}
+.chat-empty-ico svg{width:25px;height:25px;stroke:rgba(255,255,255,.35);fill:none;}
+.chat-empty-t{font-size:15px;font-weight:700;color:var(--txt-muted);}
+.chat-empty-d{font-size:12px;color:var(--txt-muted);text-align:center;line-height:1.8;}
+
+/* 터미널 */
+.terminal-box{background:var(--ink);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.06);}
+.terminal-hdr{padding:10px 15px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;}
+.terminal-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.3);display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.6px;}
+.t-blink{width:6px;height:6px;border-radius:50%;background:#22D3A5;animation:blink 1s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+.terminal-phase{font-size:11px;color:rgba(255,255,255,.28);}
+.terminal-phase b{color:#60A5FA;font-weight:700;}
+.terminal-body{padding:12px 15px;min-height:120px;display:flex;flex-direction:column;gap:2px;max-height:260px;overflow-y:auto;}
+.mask-line{font-size:12px;font-family:'Courier New',monospace;line-height:1.7;opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s;white-space:pre-wrap;word-break:break-all;}
+.mask-line.show{opacity:1;transform:translateY(0);}
+.t-co{color:#34D399;font-weight:700;background:rgba(52,211,153,.1);padding:1px 5px;border-radius:3px;}
+.t-ac{color:#60A5FA;font-weight:700;background:rgba(96,165,250,.1);padding:1px 5px;border-radius:3px;}
+.t-ca{color:#FBBF24;font-weight:700;background:rgba(251,191,36,.1);padding:1px 5px;border-radius:3px;}
+.t-pl{color:rgba(255,255,255,.45);}
+.t-real{color:#F0FDF4;font-weight:700;font-family:'Courier New',monospace;}
+.t-arrow{color:rgba(255,255,255,.2);}
+.t-sep{color:rgba(255,255,255,.08);}
+.t-send{color:#60A5FA;font-weight:600;}
+.t-recv{color:#34D399;font-weight:600;}
+.t-done{color:#22D3A5;font-weight:700;}
+.terminal-footer{padding:8px 15px;background:rgba(255,255,255,.02);border-top:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:12px;}
+.mask-stat{display:flex;align-items:center;gap:5px;font-size:11px;}
+.msd{width:6px;height:6px;border-radius:50%;}.msd.co{background:#34D399;}.msd.ac{background:#60A5FA;}.msd.ca{background:#FBBF24;}
+.msv{font-weight:800;color:white;min-width:16px;}.msl{color:rgba(255,255,255,.28);}
+.mask-wait{display:flex;align-items:center;gap:5px;margin-left:auto;font-size:11px;color:rgba(255,255,255,.22);}
+.mask-dots span{display:inline-block;animation:dp 1.2s ease-in-out infinite;}
+.mask-dots span:nth-child(2){animation-delay:.2s;}.mask-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes dp{0%,80%,100%{opacity:.2;}40%{opacity:1;}}
+
+/* 말풍선 */
+.chat-q{display:block;margin-left:auto;max-width:70%;background:var(--blue);color:white;padding:10px 15px;border-radius:14px 14px 4px 14px;font-size:13px;font-weight:500;line-height:1.6;}
+.chat-q.followup{background:var(--ink3);border:1px solid rgba(255,255,255,.08);}
+
+/* 의도 뱃지 */
+.intent-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;margin:2px 0 4px;}
+.intent-badge.reuse{background:var(--greenbg);color:var(--green);border:1px solid var(--greenbd);}
+.intent-badge.refetch{background:var(--amberbg);color:var(--amber);border:1px solid var(--amberbd);}
+.intent-badge.general{background:#F3F0FF;color:#7C3AED;border:1px solid #DDD6FE;}
+[data-theme="dark"] .intent-badge.general{background:rgba(124,58,237,.1);color:#A78BFA;border-color:rgba(124,58,237,.25);}
+.general-mark{background:linear-gradient(135deg,#7C3AED,#A855F7);}
+/* ── 차트 영역 ── */
+.chart-wrap{padding:16px 15px;border-top:1px solid var(--border2);}
+.chart-title{font-size:11px;font-weight:800;color:var(--txt-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.chart-title-ico{font-size:13px;}
+.chart-canvas-wrap{position:relative;width:100%;}
+.chart-canvas-wrap.bar{height:200px;}
+.chart-canvas-wrap.doughnut{height:220px;display:flex;justify-content:center;}
+.chart-canvas-wrap.line{height:180px;}
+
+/* ════ 5가지 신기능 CSS ════ */
+
+/* ① 한 줄 요약 배지 */
+.summary-badge{display:flex;align-items:center;gap:8px;padding:8px 15px;background:linear-gradient(90deg,rgba(37,99,235,.07),rgba(124,58,237,.05));border-bottom:1px solid var(--border2);flex-wrap:wrap;}
+.sb-item{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;border:1px solid;}
+.sb-item.info{background:var(--bluebg);color:var(--blue);border-color:var(--bluebd);}
+.sb-item.warn{background:#FEF3C7;color:#D97706;border-color:#FDE68A;}
+.sb-item.danger{background:var(--redbg);color:var(--red);border-color:var(--redbd);}
+.sb-item.ok{background:var(--greenbg);color:var(--green);border-color:var(--greenbd);}
+[data-theme="dark"] .sb-item.warn{background:rgba(217,119,6,.1);border-color:rgba(217,119,6,.25);}
+
+/* ② 이상 감지 경고 배지 */
+.alert-strip{display:flex;align-items:center;gap:7px;padding:8px 15px;background:rgba(220,38,38,.06);border-bottom:1px solid rgba(220,38,38,.15);font-size:12px;color:var(--red);font-weight:600;}
+.alert-strip svg{width:14px;height:14px;stroke:var(--red);fill:none;flex-shrink:0;}
+.alert-items{display:flex;flex-wrap:wrap;gap:5px;}
+.alert-chip{font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.2);color:var(--red);}
+
+/* ③ 추천 질문 */
+.suggest-wrap{padding:10px 15px;border-top:1px solid var(--border2);background:var(--bg-card2);}
+.suggest-lbl{font-size:10px;font-weight:800;color:var(--txt-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px;}
+.suggest-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.suggest-chip{padding:5px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;font-size:11px;font-weight:600;color:var(--txt-sub);cursor:pointer;transition:all .13s;font-family:inherit;}
+.suggest-chip:hover{background:var(--bluebg);border-color:var(--bluebd);color:var(--blue);}
+
+/* ④ 북마크/메모 */
+.card-actions{display:flex;align-items:center;gap:6px;margin-left:auto;}
+.card-btn{width:26px;height:26px;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .13s;color:var(--txt-muted);}
+.card-btn:hover{background:var(--g100);color:var(--txt-primary);}
+.card-btn.bookmarked{color:#F59E0B;}
+.card-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;}
+.card-btn.bookmarked svg{fill:#F59E0B;stroke:#F59E0B;}
+[data-theme="dark"] .card-btn:hover{background:rgba(255,255,255,.08);}
+.memo-area{display:none;padding:10px 15px;border-top:1px solid var(--border2);background:var(--bg-card2);}
+.memo-area.open{display:block;}
+.memo-ta{width:100%;padding:8px 12px;background:var(--input-box-bg);border:1.5px solid var(--border);border-radius:8px;font-size:12px;color:var(--txt-primary);font-family:inherit;resize:none;outline:none;min-height:60px;transition:border-color .13s;}
+.memo-ta:focus{border-color:var(--bluebd);}
+.memo-ta::placeholder{color:var(--txt-muted);}
+.memo-save-btn{margin-top:6px;padding:5px 14px;background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.memo-saved{font-size:11px;color:var(--green);font-weight:600;margin-top:4px;display:none;}
+
+/* ⑤ PDF/Excel 내보내기 */
+.export-btn{padding:4px 11px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);font-size:10px;font-weight:700;color:var(--txt-sub);cursor:pointer;font-family:inherit;transition:all .13s;display:flex;align-items:center;gap:4px;}
+.export-btn:hover{background:var(--bluebg);border-color:var(--bluebd);color:var(--blue);}
+
+/* 캐시 확인 모달 */
+.cache-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .18s;}
+.cache-modal-overlay.show{display:flex;opacity:1;}
+.cache-modal{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:28px 28px 22px;width:340px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.2);transform:translateY(10px);transition:transform .18s;}
+.cache-modal-overlay.show .cache-modal{transform:translateY(0);}
+.cache-modal-ico{width:38px;height:38px;background:var(--bluebg);border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.cache-modal-ico svg{width:18px;height:18px;stroke:var(--blue);fill:none;stroke-width:2;}
+.cache-modal-t{font-size:15px;font-weight:800;color:var(--txt-primary);margin-bottom:6px;}
+.cache-modal-d{font-size:12px;color:var(--txt-sub);line-height:1.7;margin-bottom:20px;}
+.cache-modal-btns{display:flex;gap:8px;}
+.cache-modal-btn{flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .13s;}
+.cache-modal-btn.primary{background:var(--blue);color:white;}
+.cache-modal-btn.primary:hover{background:var(--blue2);}
+.cache-modal-btn.secondary{background:var(--bg-card2);border:1px solid var(--border);color:var(--txt-sub);}
+.cache-modal-btn.secondary:hover{background:var(--g100);color:var(--txt-primary);}
+.export-btn svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;}
+
+
+/* 리포트 카드 */
+.report-card{background:var(--bg-card);border-radius:10px;border:1px solid var(--border);transition:background .25s;box-shadow:0 1px 4px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.03);overflow:hidden;}
+.report-hdr{display:flex;align-items:center;gap:10px;padding:11px 15px;background:var(--report-hdr);border-bottom:1px solid var(--border2);transition:background .25s;}
+.ai-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--blue),#7C3AED);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ai-mark svg{width:14px;height:14px;stroke:white;fill:none;stroke-width:1.8;}
+.ai-name{font-size:12px;font-weight:700;color:var(--txt-primary);}
+.ai-sub{font-size:10px;color:var(--txt-muted);}
+.ai-ts{margin-left:auto;font-size:10px;color:var(--txt-muted);text-align:right;}
+.report-tags{display:flex;gap:5px;padding:7px 15px;border-bottom:1px solid var(--border2);flex-wrap:wrap;}
+.rtag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;border:1px solid;}
+.rtag.co{background:var(--greenbg);color:var(--green);border-color:var(--greenbd);}
+.rtag.ac{background:var(--bluebg);color:var(--blue);border-color:var(--bluebd);}
+.rtag.ca{background:var(--amberbg);color:var(--amber);border-color:var(--amberbd);}
+.report-body{padding:15px;}
+
+/* 마크다운 */
+.md-content{font-size:13px;line-height:1.9;color:var(--txt-sub);}
+.md-content h1{font-size:13px;font-weight:800;color:#fff;margin:16px 0 9px;padding:7px 13px;background:var(--ink);border-radius:6px;}
+.md-content h2{font-size:11px;font-weight:800;color:var(--blue);margin:13px 0 7px;padding:4px 12px 4px 13px;background:var(--bluebg);border-left:3px solid var(--blue);border-radius:0 4px 4px 0;text-transform:uppercase;letter-spacing:.3px;}
+.md-content h3{font-size:12px;font-weight:700;color:var(--g700);margin:10px 0 5px;padding-bottom:4px;border-bottom:1px dashed var(--g200);}
+.md-content h1:first-child,.md-content h2:first-child,.md-content h3:first-child{margin-top:0;}
+.md-content p{margin-bottom:8px;}.md-content p:last-child{margin-bottom:0;}
+.md-content strong{color:var(--txt-primary);font-weight:800;}
+.md-content em{color:var(--blue);font-style:normal;font-weight:600;}
+.md-content ul,.md-content ol{padding-left:17px;margin:6px 0 9px;}
+.md-content li{margin-bottom:3px;}
+.md-content hr{border:none;border-top:1px solid var(--g200);margin:12px 0;}
+.md-content blockquote{border-left:3px solid var(--blue);margin:8px 0;padding:8px 13px;background:var(--bluebg);border-radius:0 5px 5px 0;color:var(--g600);font-size:12px;}
+.tbl-wrap{overflow-x:auto;margin:10px 0;border-radius:7px;box-shadow:0 1px 5px rgba(0,0,0,.04);border:1px solid var(--g200);}
+.md-content table{width:100%;border-collapse:collapse;font-size:12px;}
+.md-content thead{background:var(--ink);}
+.md-content thead th{color:rgba(255,255,255,.65);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:7px 11px;text-align:left;border:none;white-space:nowrap;}
+.md-content tbody tr{border-bottom:1px solid var(--g100);}
+.md-content tbody tr:last-child{border-bottom:none;}
+.md-content tbody tr:hover td{background:var(--bluebg);}
+.md-content tbody td{padding:6px 11px;color:var(--txt-sub);border:none;}
+.md-content tbody tr:nth-child(even) td{background:var(--g50);}
+
+/* 생성과정 */
+.proc-panel{border-top:1px solid var(--g100);}
+.proc-panel.hidden{display:none;}
+.proc-toggle{display:flex;align-items:center;justify-content:space-between;padding:9px 15px;cursor:pointer;background:var(--proc-toggle);transition:background .13s;}
+.proc-toggle:hover,.proc-toggle.open{background:var(--proc-toggle-hover);}
+.proc-toggle-l{display:flex;align-items:center;gap:7px;}
+.proc-lbl{font-size:11px;font-weight:800;color:var(--txt-sub);}
+.proc-badge{font-size:10px;font-weight:700;background:var(--bluebg);color:var(--blue);border:1px solid var(--bluebd);padding:1px 7px;border-radius:10px;}
+.proc-hint{font-size:10px;color:var(--g400);}
+.chevron{width:13px;height:13px;stroke:var(--g400);fill:none;stroke-width:2.5;transition:transform .2s;}
+.chevron.open{transform:rotate(180deg);}
+.proc-body{display:none;border-top:1px solid var(--g100);}
+.proc-body.open{display:block;}
+.proc-section{padding:12px 15px;border-bottom:1px solid var(--g100);}
+.proc-section:last-child{border-bottom:none;}
+.proc-sec-t{display:flex;align-items:center;gap:6px;margin-bottom:9px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;}
+.proc-sec-t.mask{color:var(--blue);}.proc-sec-t.unmask{color:var(--green);}
+.sp{font-size:9px;font-weight:800;padding:2px 6px;border-radius:3px;}
+.proc-sec-t.mask .sp{background:var(--bluebg);color:var(--blue);}
+.proc-sec-t.unmask .sp{background:var(--greenbg);color:var(--green);}
+.proc-tbl{width:100%;border-collapse:collapse;font-size:11px;border:1px solid var(--g200);border-radius:6px;overflow:hidden;}
+.proc-tbl thead{background:var(--g800);}
+.proc-tbl thead th{color:rgba(255,255,255,.45);font-size:9px;font-weight:700;text-transform:uppercase;padding:5px 9px;text-align:left;border:none;}
+.proc-tbl tbody tr{border-bottom:1px solid var(--g100);}
+.proc-tbl tbody tr:last-child{border-bottom:none;}
+.proc-tbl tbody td{padding:5px 9px;border:none;color:var(--txt-sub);}
+.tok{font-family:monospace;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;}
+.tok.co{background:var(--greenbg);color:var(--green);}
+.tok.ac{background:var(--bluebg);color:var(--blue);}
+.tok.ca{background:var(--amberbg);color:var(--amber);}
+.tarr{color:var(--g300);text-align:center;font-size:12px;}
+.realv{font-weight:700;color:var(--txt-primary);font-size:11px;font-family:monospace;}
+
+/* 복수 후보 선택 UI */
+.candidate-wrap{background:var(--bg-card);border:1px solid var(--bluebd);border-radius:10px;padding:14px 16px;margin:4px 0;}
+.candidate-msg{font-size:13px;font-weight:600;color:var(--txt-primary);margin-bottom:10px;}
+.candidate-btns{display:flex;flex-wrap:wrap;gap:8px;}
+.candidate-btn{padding:7px 16px;background:var(--bluebg);border:1.5px solid var(--bluebd);border-radius:20px;font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;font-family:inherit;transition:all .13s;}
+.candidate-btn:hover{background:var(--blue);color:white;}
+
+/* 분석 페이지 입력창 위 칩 */
+.analysis-chips{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:10px;}
+.analysis-chips:empty{display:none;}
+.a-chip{padding:5px 12px;background:var(--bg-card2);border:1px solid var(--border);border-radius:16px;font-size:11px;font-weight:600;color:var(--txt-sub);cursor:pointer;transition:all .13s;white-space:nowrap;font-family:inherit;}
+.a-chip:hover{background:var(--bluebg);border-color:var(--bluebd);color:var(--blue);}
+.a-chip.active-chip{background:var(--blue);border-color:var(--blue);color:white;}
+
+/* 입력바 — 항상 하단 고정 */
+.input-bar{padding:12px 18px;background:var(--input-bar-bg);border-top:1px solid var(--border);flex-shrink:0;box-shadow:0 -4px 20px rgba(0,0,0,.06);transition:background .25s;}
+.input-box{display:flex;align-items:flex-end;gap:9px;background:var(--input-box-bg);border:1.5px solid var(--border);border-radius:12px;padding:7px 8px 7px 15px;transition:border-color .15s;}
+.input-box:focus-within{border-color:var(--bluebd);background:#fff;}
+.input-ta{flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--txt-primary);font-family:inherit;resize:none;min-height:22px;max-height:110px;line-height:1.6;padding:2px 0;}
+.input-ta::placeholder{color:var(--g400);}
+.send-btn{width:34px;height:34px;background:var(--blue);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .13s;flex-shrink:0;}
+.send-btn:hover{background:var(--blue2);}
+.send-btn svg{width:15px;height:15px;stroke:white;fill:none;stroke-width:2;}
+.send-btn:disabled{background:var(--g200);cursor:not-allowed;}
+.input-hint{font-size:11px;color:var(--hint-color);margin-top:5px;padding:0 3px;}
+.err-msg{background:var(--redbg);border:1px solid var(--redbd);border-radius:8px;padding:11px 15px;font-size:13px;color:var(--red);font-weight:500;}
+.loading-inline{padding:11px 15px;font-size:12px;color:var(--g400);display:flex;align-items:center;gap:8px;}
+.spin-sm{display:inline-block;width:12px;height:12px;border:2px solid var(--g200);border-top-color:var(--blue);border-radius:50%;animation:rot .7s linear infinite;flex-shrink:0;}
+@keyframes rot{to{transform:rotate(360deg);}}
+
+/* ── 다크/라이트 모드 토글 ── */
+.theme-toggle{position:fixed;left:20px;bottom:20px;z-index:500;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:24px;border:1px solid;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;transition:all .2s;box-shadow:0 4px 16px rgba(0,0,0,.15);}
+[data-theme="dark"] .theme-toggle{background:#1A2D47;border-color:#1E3A5F;color:#94A3B8;}
+[data-theme="dark"] .theme-toggle:hover{background:#1E3A5F;color:#E2E8F0;}
+:root:not([data-theme="dark"]) .theme-toggle{background:rgba(10,22,40,.85);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.7);}
+:root:not([data-theme="dark"]) .theme-toggle:hover{background:rgba(10,22,40,.95);color:white;}
+.theme-toggle-ico{font-size:15px;line-height:1;}
+.theme-toggle-txt{letter-spacing:.2px;}
+
+/* 다크모드 시 분석페이지 전용 색 */
+[data-theme="dark"] .q-search svg{stroke:var(--txt-muted);}
+[data-theme="dark"] .q-search-inp::placeholder{color:var(--txt-muted);}
+[data-theme="dark"] .input-ta::placeholder{color:var(--txt-muted);}
+[data-theme="dark"] .input-box:focus-within{border-color:rgba(37,99,235,.5);background:rgba(37,99,235,.05);}
+[data-theme="dark"] .proc-section{border-bottom:1px solid var(--border);}
+[data-theme="dark"] .proc-tbl{border:1px solid var(--border);}
+[data-theme="dark"] .proc-tbl tbody tr{border-bottom:1px solid var(--border);}
+[data-theme="dark"] .md-content tbody tr:nth-child(even) td{background:rgba(255,255,255,.03);}
+[data-theme="dark"] .md-content tbody tr:hover td{background:rgba(37,99,235,.1);}
+[data-theme="dark"] .md-content thead{background:#070F1E;}
+[data-theme="dark"] .tbl-wrap{border:1px solid var(--border);}
+[data-theme="dark"] .err-msg{background:rgba(220,38,38,.1);border-color:rgba(220,38,38,.25);color:#FCA5A5;}
+[data-theme="dark"] .md-content blockquote{background:rgba(37,99,235,.08);color:var(--txt-sub);}
+[data-theme="dark"] .md-content h2{background:rgba(37,99,235,.1);}
+[data-theme="dark"] .chat-q{background:#1D4ED8;}
+[data-theme="dark"] .chat-q.followup{background:#1A2D47;border-color:rgba(255,255,255,.08);color:var(--txt-primary);}
+[data-theme="dark"] .intent-badge.reuse{background:rgba(5,150,105,.1);border-color:rgba(5,150,105,.25);}
+[data-theme="dark"] .intent-badge.refetch{background:rgba(217,119,6,.1);border-color:rgba(217,119,6,.25);}
+[data-theme="dark"] .loading-inline{color:var(--txt-muted);}
+[data-theme="dark"] .hdr-online{color:rgba(255,255,255,.3);}
+[data-theme="dark"] .send-btn:disabled{background:#1A2D47;}
+
+/* ════ 메인 페이지 다크/라이트 테마 ════ */
+/* 다크모드 (기본 어두운 색) */
+[data-theme="dark"]{
+  --main-bg:#0A1628;
+  --main-headline:#ffffff;
+  --main-sub:rgba(255,255,255,.4);
+  --main-chip-bg:rgba(255,255,255,.05);
+  --main-chip-border:rgba(255,255,255,.1);
+  --main-chip-color:rgba(255,255,255,.45);
+  --main-feat-color:rgba(255,255,255,.28);
+  --main-grid:rgba(37,99,235,.07);
+  --main-logo-ver-bg:rgba(255,255,255,.07);
+  --main-logo-ver-border:rgba(255,255,255,.1);
+  --main-logo-ver-color:rgba(255,255,255,.3);
+  --search-bg:rgba(255,255,255,.07);
+  --search-border:rgba(255,255,255,.13);
+  --search-color:#ffffff;
+  --search-ph:rgba(255,255,255,.22);
+  --search-icon-c:rgba(255,255,255,.3);
+  --chips-lbl:rgba(255,255,255,.22);
+  --chip-bg:rgba(255,255,255,.05);
+  --chip-border:rgba(255,255,255,.1);
+  --chip-color:rgba(255,255,255,.45);
+  --feat-color:rgba(255,255,255,.28);
+  --logo-name-c:#ffffff;
+  --logo-ver-bg:rgba(255,255,255,.07);
+  --logo-ver-border:rgba(255,255,255,.1);
+  --logo-ver-color:rgba(255,255,255,.3);
+}
+/* 라이트모드 오버라이드 */
+:root:not([data-theme="dark"]){
+  --main-bg:#F1F5F9;
+  --main-headline:#0F172A;
+  --main-sub:#64748B;
+  --main-chip-bg:#ffffff;
+  --main-chip-border:#E2E8F0;
+  --main-chip-color:#475569;
+  --main-feat-color:#64748B;
+  --main-grid:rgba(37,99,235,.05);
+  --main-logo-ver-bg:#EFF6FF;
+  --main-logo-ver-border:#BFDBFE;
+  --main-logo-ver-color:#2563EB;
+  --search-bg:#ffffff;
+  --search-border:#E2E8F0;
+  --search-color:#0F172A;
+  --search-ph:#94A3B8;
+  --search-icon-c:#94A3B8;
+  --chips-lbl:#94A3B8;
+  --chip-bg:#ffffff;
+  --chip-border:#E2E8F0;
+  --chip-color:#475569;
+  --feat-color:#64748B;
+  --logo-name-c:#0F172A;
+  --logo-ver-bg:#EFF6FF;
+  --logo-ver-border:#BFDBFE;
+  --logo-ver-color:#2563EB;
+}
+/* 라이트모드 글로우 숨기기 */
+:root:not([data-theme="dark"]) .glow{display:none;}
+:root:not([data-theme="dark"]) .search-box:focus-within{border-color:var(--bluebd);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+:root:not([data-theme="dark"]) .main-chip:hover{background:var(--bluebg);border-color:var(--bluebd);color:var(--blue);}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- 다크/라이트 모드 토글 -->
+<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+  <span class="theme-toggle-ico" id="themeIco">🌙</span>
+  <span class="theme-toggle-txt" id="themeTxt">다크 모드</span>
+</button>
+
+<!-- API 키 모달 -->
+<div class="key-overlay hidden" id="keyOverlay">
+  <div class="key-modal">
+    <div class="key-modal-ico"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/></svg></div>
+    <div class="key-modal-t">Anthropic API 키 입력</div>
+    <div class="key-modal-d">SecureAgent를 사용하려면 API 키가 필요합니다.<br>키는 브라우저에만 저장되며 외부로 전송되지 않습니다.</div>
+    <div id="keyInputArea">
+      <div class="key-input-wrap">
+        <input class="key-input" id="keyInput" type="password" placeholder="sk-ant-api03-..." autocomplete="off">
+        <span class="key-eye" onclick="toggleKeyVis()">👁</span>
+      </div>
+      <button class="key-save-btn" onclick="saveKey()">저장하고 시작하기</button>
+    </div>
+    <div id="keySavedArea" style="display:none">
+      <div class="key-saved-bar">
+        <span class="key-saved-txt">✓ API 키 설정됨 &nbsp;·&nbsp; <span id="keyMasked"></span></span>
+        <button class="key-change-btn" onclick="changeKey()">변경</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MAIN 페이지 ════ -->
+<div class="page active" id="pagMain">
+  <div class="glow glow1"></div>
+  <div class="glow glow2"></div>
+  <div class="glow glow3"></div>
+  <div class="main-wrap">
+    <div class="main-logo">
+      <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.5 3.8 10.7 8 12 4.2-1.3 8-6.5 8-12V6L12 2z"/></svg></div>
+      <span class="logo-name">SecureAgent</span>
+      <span class="logo-ver">v2.0</span>
+    </div>
+    <h1 class="main-headline">금융 데이터를<br><span class="hl">안전하게 분석</span>하다</h1>
+    <p class="main-sub">민감정보를 자동 마스킹하고 Claude AI가 분석합니다.<br>계좌번호·회사명은 LLM에 절대 노출되지 않습니다.</p>
+    <div class="main-search">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-inp" id="mainInp" placeholder="궁금한 것을 물어보세요. 예) 자금현황 알려줘" onkeydown="if(event.key==='Enter')mainSearch()">
+        <button class="search-btn" onclick="mainSearch()">분석 시작</button>
+      </div>
+    </div>
+    <div class="chips-label">빠른 질문</div>
+    <div class="main-chips">
+      <div class="main-chip" onclick="quickQ('자금현황')">자금현황</div>
+      <div class="main-chip" onclick="quickQ('수시입출계좌 잔액')">수시입출계좌 잔액</div>
+      <div class="main-chip" onclick="quickQ('이번 달 수시입출 거래내역')">이번 달 거래내역</div>
+      <div class="main-chip" onclick="quickQ('대출 잔액')">대출 잔액</div>
+      <div class="main-chip" onclick="quickQ('3달간 카드 승인내역')">카드 승인내역</div>
+      <div class="main-chip" onclick="quickQ('최근 환율')">최근 환율</div>
+      <div class="main-chip" onclick="quickQ('달러 잔액 조회')">달러 잔액</div>
+      <div class="main-chip" onclick="quickQ('신탁계좌 만기일')">신탁계좌 만기일</div>
+      <div class="main-chip" onclick="quickQ('증권계좌 잔액')">증권계좌 잔액</div>
+    </div>
+    <div class="main-feats">
+      <div class="feat"><div class="feat-dot fd-blue"></div>자동 마스킹 · 역마스킹</div>
+      <div class="feat"><div class="feat-dot fd-green"></div>Claude AI 금융 분석</div>
+      <div class="feat"><div class="feat-dot fd-purple"></div>추가질문 대화 지원</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ANALYSIS 페이지 ════ -->
+<div class="page" id="pagAnalysis">
+  <div class="hdr">
+    <div class="hdr-l">
+      <div class="hdr-back" onclick="goMain()"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></div>
+      <div class="hdr-mark"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.5 3.8 10.7 8 12 4.2-1.3 8-6.5 8-12V6L12 2z"/></svg></div>
+      <span class="hdr-name">SecureAgent</span>
+      <span class="hdr-ver">v2.0</span>
+    </div>
+    <div class="hdr-r">
+      <button class="hdr-key-btn" id="hdrKeyBtn" onclick="openKeyModal()">API 키 미설정</button>
+      <div class="hdr-online"><div class="hdr-dot"></div>정상 운영</div>
+    </div>
+  </div>
+  <div class="analysis-layout">
+    <div class="q-panel">
+      <!-- 탭 헤더 -->
+      <div class="q-tab-bar">
+        <button class="q-tab-btn active" id="tabRecent" onclick="switchPanelTab('recent')">최근 질문</button>
+        <button class="q-tab-btn" id="tabBm" onclick="switchPanelTab('bookmark')">
+          ★ 북마크
+          <span class="q-tab-bm-cnt" id="bmCount">0</span>
+        </button>
+      </div>
+
+      <!-- 최근 질문 탭 -->
+      <div class="q-tab-pane" id="paneRecent">
+        <div class="q-search-wrap">
+          <div class="q-search">
+            <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input class="q-search-inp" id="qSrch" placeholder="질문 검색..." oninput="renderQList(this.value)">
+          </div>
+        </div>
+        <div class="q-list" id="qList"></div>
+        <div class="q-panel-footer">
+          <button class="q-clear-btn" onclick="if(confirm('질문 내역을 모두 삭제할까요?'))clearHistory()">전체 삭제</button>
+        </div>
+      </div>
+
+      <!-- 북마크 탭 -->
+      <div class="q-tab-pane hidden" id="paneBm">
+        <div class="q-bm-list" id="qBmList"></div>
+      </div>
+    </div>
+    <div class="main-content">
+      <div class="pipe">
+        <div class="ps" id="ps1"><div class="pd"></div>마스킹</div>
+        <div class="pa">›</div>
+        <div class="ps" id="ps2"><div class="pd"></div>AI 분석</div>
+        <div class="pa">›</div>
+        <div class="ps" id="ps3"><div class="pd"></div>복원</div>
+        <div class="pa">›</div>
+        <div class="ps" id="ps4"><div class="pd"></div>완료</div>
+      </div>
+      <div class="chat-area" id="chatArea"></div>
+      <div class="input-bar">
+        <div class="analysis-chips" id="analysisChips"></div>
+        <div class="input-box">
+          <textarea class="input-ta" id="chatTa" placeholder="추가 질문 입력... (Enter: 전송 / Shift+Enter: 줄바꿈)" rows="1"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendChat()">
+            <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5"/></svg>
+          </button>
+        </div>
+        <div class="input-hint" id="inputHint">왼쪽에서 질문을 선택하거나 직접 입력하세요</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 캐시 확인 모달 -->
+<div class="cache-modal-overlay" id="cacheModalOverlay">
+  <div class="cache-modal">
+    <div class="cache-modal-ico">
+      <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div class="cache-modal-t">이전 조회 내역이 있습니다</div>
+    <div class="cache-modal-d" id="cacheModalDesc">이 항목은 이미 조회한 내역이 있습니다.<br>이전 결과를 바로 볼까요?</div>
+    <div class="cache-modal-btns">
+      <button class="cache-modal-btn primary" id="cacheModalYes">이전 결과 보기</button>
+      <button class="cache-modal-btn secondary" id="cacheModalNo">새로 조회</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- 캐시 확인 모달 -->
+<div class="cache-modal-overlay" id="cacheModalOverlay">
+  <div class="cache-modal">
+    <div class="cache-modal-ico">
+      <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div class="cache-modal-t">이전 조회 내역이 있습니다</div>
+    <div class="cache-modal-d" id="cacheModalDesc">이 항목은 이미 조회한 내역이 있습니다.<br>이전 결과를 바로 볼까요?</div>
+    <div class="cache-modal-btns">
+      <button class="cache-modal-btn primary" id="cacheModalYes">이전 결과 보기</button>
+      <button class="cache-modal-btn secondary" id="cacheModalNo">새로 조회</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════ 샘플 데이터 ════════
+const SD={
+"자금현황":`자금현황\n회사명 계좌구분 은행명 통화코드 총잔고\n20260313 (주)쿠콘글로벌지점 수시 경남은행 EUR 1.11\n20260313 (주)쿠콘글로벌지점 수시 광주은행 KRW 34,070\n20260313 (주)쿠콘글로벌지점 수시 국민은행 USD 61.72\n20260313 (주)쿠콘글로벌지점 수시 기업은행 KRW 38,490\n20260313 (주)쿠콘글로벌지점 예적금 기업은행 KRW 121,000\n20260313 AI 테스용사업장 대출 농협은행 KRW 8,000,000,000\n20260313 AI 테스용사업장 예적금 농협은행 KRW 127,540,000\n20260313 씨앤에스 대출 농협은행 KRW 2,750,000,000\n20260313 씨앤에스 수시 광주은행 KRW 52,688\n20260313 씨앤에스 수시 농협은행 KRW 18,424\n20260313 씨앤에스 예적금 경남은행 KRW 1,058,903,714\n20260313 씨앤에스 예적금 기업은행 KRW 1,054,476,923\n20260313 씨앤에스 예적금 우리은행 KRW 1,000,000,000\n20260313 웹케시테스트 예적금 농협은행 KRW 0`,
+"월간 자금 흐름":`월간 자금 흐름\n기준일자 회사명 통화코드 입출금구분 잔액\n20260228 (주)쿠콘글로벌지점 KRW 수시 1,541,248\n20260131 (주)쿠콘글로벌지점 KRW 수시 2,038,164\n20260228 AI 테스용사업장 KRW 대출 8,250,000,000\n20260228 AI 테스용사업장 KRW 예적금 127,540,000\n20260228 씨앤에스 KRW 대출 2,750,000,000\n20260228 씨앤에스 KRW 수시 85,159\n20260228 씨앤에스 KRW 예적금 3,123,408,637`,
+"수시입출계좌 잔액":`수시입출계좌 잔액 EUR 8.46 JPY 473.00 USD 210.26 KRW 157,827\n회사명 계좌구분 은행명 계좌번호 통화코드 총잔고\n(주)쿠콘글로벌지점 수시 경남은행 2810002267104 EUR 1.11\n(주)쿠콘글로벌지점 수시 경남은행 2810002267104 JPY 103.00\n(주)쿠콘글로벌지점 수시 경남은행 2810002267104 USD 11.39\n(주)쿠콘글로벌지점 수시 광주은행 1107020736263 KRW 34,070\n(주)쿠콘글로벌지점 수시 국민은행 75266811010050 USD 61.72\n씨앤에스 수시 농협은행 134401000445 KRW 11,262\n씨앤에스 수시 농협은행 134401000458 KRW 1,615\n씨앤에스 수시 하나은행 14091001922404 KRW 4,073`,
+"이번 달 수시입출 거래내역":`이번 달 거래내역 입금 15건 출금 38건\n회사명 계좌구분 은행명 계좌번호 거래일자 거래시간 입금금액 출금금액 잔액 비고\n(주)쿠콘글로벌지점 수시 농협은행 301024282204 20260309 05:56:18 1 0 102,384 IN_0556\n(주)쿠콘글로벌지점 수시 농협은행 301024282204 20260309 05:40:37 0 501 102,383 주식회사 쿠콘\n씨앤에스 수시 농협은행 134401000445 20260311 15:56:37 10 0 11,262\n씨앤에스 수시 농협은행 134401000445 20260310 09:02:39 0 10 11,261 경리나라스크래핑이체\n씨앤에스 수시 농협은행 134401000458 20260311 15:56:37 0 10 1,615 보안자등록`,
+"보유하고 있는 전체 계좌":`전체 계좌 목록\n회사명 계좌구분 은행명 계좌번호 통화코드 총잔고\n(주)쿠콘글로벌지점 수시 경남은행 2810002267104 EUR 1.11\n(주)쿠콘글로벌지점 수시 광주은행 1107020736263 KRW 34,070\n(주)쿠콘글로벌지점 수시 기업은행 08908275401014 KRW 38,490\n(주)쿠콘글로벌지점 예적금 기업은행 08908275415001 KRW 121,000\nAI 테스용사업장 대출 농협은행 01**20**23901 KRW 8,000,000,000\n씨앤에스 대출 농협은행 4726614401201 KRW 700,000,000\n씨앤에스 수시 농협은행 134401000445 KRW 11,262\n씨앤에스 예적금 경남은행 713072043839 KRW 1,058,903,714\n법케시사업장 대출 농협은행 9912351233246234 KRW 0\n웹케시테스트 예적금 농협은행 13421512513512341243 KRW 0`,
+"대출 잔액":`대출 잔액 11,000,000,000원\n회사명 계좌구분 은행명 계좌번호 통화코드 총잔고\nAI 테스용사업장 대출 기업은행 03**04**93200033 KRW 0\nAI 테스용사업장 대출 농협은행 01**20**23901 KRW 8,000,000,000\nAI 테스용사업장 대출 농협은행 01**20**64481 KRW 250,000,000\n법케시사업장 대출 농협은행 9912351233246234 KRW 0\n씨앤에스 대출 농협은행 4726614401201 KRW 700,000,000\n씨앤에스 대출 농협은행 7777777 KRW 2,050,000,000`,
+"3달간 카드 승인내역":`3달간 카드 승인내역 5,542건\n회사명 카드사명 카드번호 내역구분 사용일자 사용시간 승인번호 총승인금액 가맹점명\n씨앤에스 NH카드 5531710494453518 승인 20260127 23:31 84664911 55,000 주식회사 카카오모빌리티\n씨앤에스 NH카드 5531710494453518 승인 20260127 22:59 82364901 2,000 GS25논산은솔점\n씨앤에스 NH카드 5531710494453518 승인 20260127 21:43 84990656 20,000 어해도횟집\n씨앤에스 NH카드 5531710494453518 승인 20260127 20:29 83821655 43,875 여주셀프주유소`,
+"가장 많이 쓴 카드 사용처":`가장 많이 쓴 카드 사용처\n회사명 통화코드 총 승인금액 가맹점명\n씨앤에스 KRW 140,126,684 (주)하나투어-ARS`,
+"3개월간 매입 세금계산서":`3개월간 매입 세금계산서 16,089,647,306원\n회사명 매출입구분 합계금액\n씨앤에스 매입 15,089,255,660\n웹케시테스트 매입 1,000,391,646`,
+"최근 환율":`최근 환율\n환율등록일 통화코드 통화명 평균기준환율 전신환매도율 전신환매입율\n20260309 USD 미국 1,474.50 1,460.20 1,488.80\n20260309 EUR 유로통화 1,700.84 1,683.84 1,717.84\n20260309 JPY 일본 931.61 922.49 940.73\n20260309 CNY 중국 213.29 211.18 215.40\n20260308 USD 미국 1,464.30 1,450.10 1,478.50`,
+"달러 잔액 조회":`달러 잔액 USD 210.26\n회사명 계좌구분 은행명 계좌번호 통화코드 총잔고\n(주)쿠콘글로벌지점 수시 경남은행 2810002267104 USD 11.39\n(주)쿠콘글로벌지점 수시 국민은행 75266811010050 USD 61.72\n(주)쿠콘글로벌지점 수시 농협은행 4520016999431 USD 4.06\n(주)쿠콘글로벌지점 수시 신한은행 180008634281 USD 50.86`,
+"외화 총액":`외화 총액 EUR 8.46 JPY 473.00 USD 210.26\n회사명 계좌구분 은행명 통화코드 총잔고\n(주)쿠콘글로벌지점 수시 경남은행 EUR 1.11\n(주)쿠콘글로벌지점 수시 경남은행 JPY 103.00\n(주)쿠콘글로벌지점 수시 농협은행 EUR 5.20\n씨앤에스 수시 농협은행 USD 0.00\nAI 테스용사업장 수시 한국씨티은행 USD 0.00`,
+"증권계좌 잔액":`증권계좌 잔액 USD 25.04\n회사명 계좌구분 은행명 계좌번호 통화코드 총잔고\nAI 테스용사업장 증권 농협은행 4580000006621 USD 25.04`,
+"은행별 외화 보유수량":`은행별 외화 보유수량 최근 1개월\n회사명 계좌구분 은행명 통화코드 입금금액 출금금액\n(주)쿠콘글로벌지점 수시 경남은행 EUR 0.00 0.00\n(주)쿠콘글로벌지점 수시 국민은행 EUR 1.10 5.00\n(주)쿠콘글로벌지점 수시 국민은행 USD 155,554,000,002.49 5.00\n(주)쿠콘글로벌지점 수시 농협은행 EUR 5.00 3.70`,
+"공급가액 순 세금계산서":`공급가액 순 세금계산서 최근 1개월\n회사명 매출입구분 승인번호 작성일자 공급받는자 공급자 공급가액 세액 합계금액\n씨앤에스 매출 20250430-41000026-000f9m0z 20260224 웹케시(주) 웹케시씨앤에스 주식회사 1,632,761,670 163,276,170 1,796,037,840\n씨앤에스 매출 20250430-41000026-000f9m47 20260222 웹케시(주) 웹케시씨앤에스 주식회사 1,516,774,542 151,677,456 1,668,451,998\n씨앤에스 매입 20250306-41000026-000f3dbw 20260216 웹케시씨앤에스 주식회사 인터프로셀(주) 182,371,716 18,237,174 200,608,890\n웹케시테스트 매입 20251101-10251106-31410617 20260215 웹케시씨앤에스 주식회사 웹케시테스트 0 0 0`,
+"신탁계좌 만기일":`신탁계좌 만기일\n회사명 계좌구분 은행명 계좌번호 통화코드 총잔고 만기일자\n(주)쿠콘글로벌지점 신탁 농협은행 0900155151515 KRW 0\n(주)쿠콘글로벌지점 신탁 농협은행 5646456456456 KRW 0\n씨앤에스 신탁 농협은행 03201052355522 KRW 0 20251209\n씨앤에스 신탁 농협은행 090455222111111 KRW 0\n씨앤에스 신탁 농협은행 11122233444568 KRW 0 2025-12-22`
+};
+const Q_LABELS=Object.keys(SD);
+
+// ════════ 상태 ════════
+var session={raw:null,maskedRaw:null,tm:{},history:[],currentQ:null};
+var busy=false,turnCnt=0;
+var SD={};  // 서버에서 로드
+
+// 샘플 데이터 서버 로드
+async function loadSampleData(){
+  try{
+    var r=await fetch('/api/sample');
+    SD=await r.json();
+    renderAnalysisChips();
+    console.log('샘플 데이터 로드 완료:', Object.keys(SD).length+'건');
+  }catch(e){
+    console.warn('샘플 데이터 로드 실패, 로컬 fallback 사용');
+  }
+}
+
+// ════════ API 키 ════════
+var SK='secureagent_api_key';
+function getKey(){return localStorage.getItem(SK)||'';}
+function openKeyModal(){
+  var k=getKey();
+  document.getElementById('keyInputArea').style.display=k?'none':'block';
+  document.getElementById('keySavedArea').style.display=k?'block':'none';
+  if(k) document.getElementById('keyMasked').textContent=k.substring(0,12)+'...'+k.slice(-4);
+  document.getElementById('keyOverlay').classList.remove('hidden');
+}
+function saveKey(){
+  var v=document.getElementById('keyInput').value.trim();
+  if(!v||!v.startsWith('sk-ant-')){document.getElementById('keyInput').style.borderColor='#F87171';return;}
+  localStorage.setItem(SK,v);
+  updateKeyBtn();
+  document.getElementById('keyOverlay').classList.add('hidden');
+  document.getElementById('keyInput').value='';
+}
+function changeKey(){
+  document.getElementById('keyInputArea').style.display='block';
+  document.getElementById('keySavedArea').style.display='none';
+  document.getElementById('keyInput').value='';
+}
+function toggleKeyVis(){var i=document.getElementById('keyInput');i.type=i.type==='password'?'text':'password';}
+function updateKeyBtn(){
+  var b=document.getElementById('hdrKeyBtn');if(!b)return;
+  if(getKey()){b.textContent='API 키 ✓';b.classList.add('set');}
+  else{b.textContent='API 키 미설정';b.classList.remove('set');}
+}
+
+// ════════ 페이지 전환 ════════
+function goMain(){
+  document.getElementById('pagMain').classList.add('active');
+  document.getElementById('pagAnalysis').classList.remove('active');
+}
+function goAnalysis(firstQ){
+  if(!getKey()){openKeyModal();return;}
+  document.getElementById('pagMain').classList.remove('active');
+  document.getElementById('pagAnalysis').classList.add('active');
+  updateKeyBtn();renderQList('');renderBmList();renderAnalysisChips();
+  if(firstQ){
+    // 캐시 있으면 복원, 없으면 새로 실행
+    var cache=loadCache();
+    if(cache[firstQ]){
+      var saved=cache[firstQ];
+      session={
+        raw:saved.sess.raw||null,
+        maskedRaw:saved.sess.maskedRaw||null,
+        tm:JSON.parse(JSON.stringify(saved.sess.tm||{})),
+        history:(saved.sess.history||[]).map(function(h){return{role:h.role,content:h.content};}),
+        currentQ:firstQ
+      };
+      document.getElementById('chatArea').innerHTML=saved.chatHTML;
+      document.getElementById('inputHint').textContent='추가 질문을 입력하세요 (현재 조회 데이터 기반으로 계속 대화 가능)';
+      renderQList('');renderAnalysisChips();scrollC();
+    }else{
+      startNewQ(firstQ);
+    }
+  }
+}
+function quickQ(q){
+  if(!getKey()){openKeyModal();return;}
+  // 메인 칩 클릭 → 항상 새 질문으로 처리 (캐시 무시)
+  document.getElementById('pagMain').classList.remove('active');
+  document.getElementById('pagAnalysis').classList.add('active');
+  updateKeyBtn();renderQList('');renderBmList();renderAnalysisChips();
+  session={raw:null,maskedRaw:null,tm:{},history:[],currentQ:q};
+  clearChat();
+  startNewQ(q);
+}
+function mainSearch(){
+  var q=document.getElementById('mainInp').value.trim();
+  if(!getKey()){openKeyModal();return;}
+  if(!q){goAnalysis(null);return;}
+
+  // 분석 페이지로 전환
+  document.getElementById('pagMain').classList.remove('active');
+  document.getElementById('pagAnalysis').classList.add('active');
+  updateKeyBtn();renderQList('');renderBmList();renderAnalysisChips();
+
+  if(SD[q]){
+    // 메인에서 입력한 SD 질문 → 항상 새 질문으로 처리 (캐시 무시)
+    session={raw:null,maskedRaw:null,tm:{},history:[],currentQ:q};
+    clearChat();
+    startNewQ(q);
+  }else{
+    // 자유 입력 → 분석 페이지 입력창에 넣고 sendChat 실행
+    setTimeout(function(){
+      var ta=document.getElementById('chatTa');
+      ta.value=q;autoResize(ta);
+      sendChat();
+    },50);
+  }
+}
+
+// ════════ 분석 페이지 칩 렌더링 ════════
+function renderAnalysisChips(){
+  var wrap=document.getElementById('analysisChips');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  Object.keys(SD).forEach(function(q){
+    var c=document.createElement('button');
+    c.className='a-chip'+(session.currentQ===q?' active-chip':'');
+    c.textContent=q;
+    c.onclick=function(){
+      if(busy)return;
+      var cache=loadCache();
+      if(cache[q]){
+        // 캐시 있으면 모달로 확인
+        showCacheModal(q,cache[q]);
+      }else{
+        // 캐시 없으면 바로 새 질문
+        session={raw:null,maskedRaw:null,tm:{},history:[],currentQ:q};
+        clearChat();renderAnalysisChips();startNewQ(q);
+      }
+    };
+    wrap.appendChild(c);
+  });
+}
+
+// ════════ 캐시 확인 모달 ════════
+function showCacheModal(q, saved){
+  var overlay=document.getElementById('cacheModalOverlay');
+  document.getElementById('cacheModalDesc').innerHTML=
+    '<b>'+q+'</b> 항목의 이전 조회 내역이 있습니다.<br>바로 확인하거나 새로 조회할 수 있습니다.';
+
+  // YES — 이전 결과 복원
+  document.getElementById('cacheModalYes').onclick=function(){
+    hideCacheModal();
+    session={
+      raw:saved.sess.raw||null,
+      maskedRaw:saved.sess.maskedRaw||null,
+      tm:JSON.parse(JSON.stringify(saved.sess.tm||{})),
+      history:(saved.sess.history||[]).map(function(h){return{role:h.role,content:h.content};}),
+      currentQ:q
+    };
+    document.getElementById('chatArea').innerHTML=saved.chatHTML;
+    document.getElementById('inputHint').textContent='추가 질문을 입력하세요 (현재 조회 데이터 기반으로 계속 대화 가능)';
+    renderQList('');renderAnalysisChips();scrollC();
+  };
+
+  // NO — 새로 질문
+  document.getElementById('cacheModalNo').onclick=function(){
+    hideCacheModal();
+    session={raw:null,maskedRaw:null,tm:{},history:[],currentQ:q};
+    clearChat();renderAnalysisChips();startNewQ(q);
+  };
+
+  overlay.classList.add('show');
+  // 오버레이 클릭 시 닫기
+  overlay.onclick=function(e){if(e.target===overlay)hideCacheModal();};
+}
+function hideCacheModal(){
+  document.getElementById('cacheModalOverlay').classList.remove('show');
+}
+
+// ════════ 질문 히스토리 (localStorage) ════════
+var HISTORY_KEY='sa_q_history';
+var CACHE_KEY='sa_q_cache'; // 질문별 대화 캐시
+
+function loadHistory(){
+  try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]');}
+  catch(e){return[];}
+}
+function saveToHistory(q){
+  // DB 저장 (비동기, UI 블로킹 없음)
+  fetch('/api/history',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({question:q})}).catch(function(){});
+  // localStorage도 동시 유지 (오프라인 대비)
+  var list=loadHistory();
+  list=list.filter(function(item){return item!==q;});
+  list.unshift(q);
+  if(list.length>50)list=list.slice(0,50);
+  localStorage.setItem(HISTORY_KEY,JSON.stringify(list));
+}
+function loadCache(){
+  try{return JSON.parse(localStorage.getItem(CACHE_KEY)||'{}');}
+  catch(e){return{};}
+}
+function saveCache(q,chatHTML,sess){
+  var sessData={raw:sess.raw,maskedRaw:sess.maskedRaw,tm:sess.tm,history:sess.history,currentQ:sess.currentQ};
+  // DB 저장
+  fetch('/api/cache',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({question:q,chatHTML:chatHTML,sess:sessData})}).catch(function(){});
+  // localStorage도 동시 유지
+  var cache=loadCache();
+  cache[q]={chatHTML:chatHTML,sess:sessData};
+  var keys=Object.keys(cache);
+  if(keys.length>30){delete cache[keys[keys.length-1]];}
+  localStorage.setItem(CACHE_KEY,JSON.stringify(cache));
+}
+function clearHistory(){
+  fetch('/api/history',{method:'DELETE'}).catch(function(){});
+  localStorage.removeItem(HISTORY_KEY);
+  localStorage.removeItem(CACHE_KEY);
+  localStorage.removeItem(BM_KEY);
+  renderQList('');
+  renderBmList();
+}
+
+// ════════ 패널 탭 전환 ════════
+function switchPanelTab(tab){
+  var isRecent = tab==='recent';
+  document.getElementById('tabRecent').className='q-tab-btn'+(isRecent?' active':'');
+  document.getElementById('tabBm').className='q-tab-btn'+(!isRecent?' active':'');
+  document.getElementById('paneRecent').className='q-tab-pane'+(isRecent?'':' hidden');
+  document.getElementById('paneBm').className='q-tab-pane'+(isRecent?' hidden':'');
+  if(!isRecent) renderBmList();
+}
+
+// ════════ 북마크 목록 렌더링 ════════
+function renderBmList(){
+  var bmList=document.getElementById('qBmList');
+  var cntEl=document.getElementById('bmCount');
+  if(!bmList)return;
+  var bm=loadBookmarks();
+  var history=loadHistory();
+  // 히스토리에 있는 것만 (삭제된 질문 제외)
+  var bmKeys=Object.keys(bm).filter(function(q){return history.indexOf(q)>=0;});
+  cntEl.textContent=bmKeys.length;
+  bmList.innerHTML='';
+  if(bmKeys.length===0){
+    bmList.innerHTML='<div class="q-bm-empty">★ 북마크한 질문이 없습니다.<br>답변 카드의 🔖 버튼을 눌러<br>북마크를 추가하세요.</div>';
+    return;
+  }
+  // 최신 북마크 순 정렬
+  bmKeys.sort(function(a,b){return (bm[b].ts||0)-(bm[a].ts||0);});
+  bmKeys.forEach(function(q){
+    var row=document.createElement('div');
+    row.className='q-item'+(session.currentQ===q?' active':'');
+    var star=document.createElement('span');
+    star.className='q-item-bm';star.textContent='★';
+    var txt=document.createElement('span');
+    txt.className='q-item-txt';txt.textContent=q;
+    txt.onclick=function(){selectQ(q);};
+    var del=document.createElement('button');
+    del.className='q-item-del';del.innerHTML='×';del.title='북마크 해제';
+    del.onclick=function(e){
+      e.stopPropagation();
+      var bmData=loadBookmarks();delete bmData[q];
+      localStorage.setItem(BM_KEY,JSON.stringify(bmData));
+      renderBmList();renderQList(document.getElementById('qSrch').value);
+    };
+    row.appendChild(star);row.appendChild(txt);row.appendChild(del);
+    bmList.appendChild(row);
+  });
+}
+
+// ════════ 질문 목록 ════════
+function renderQList(filter){
+  var list=document.getElementById('qList');
+  list.innerHTML='';
+  var history=loadHistory();
+  var bm=loadBookmarks();
+  var filtered=history.filter(function(q){
+    return !filter||q.toLowerCase().indexOf(filter.toLowerCase())>=0;
+  });
+  if(filtered.length===0){
+    var empty=document.createElement('div');
+    empty.className='q-empty-hint';
+    empty.textContent=filter?'검색 결과 없음':'아직 질문 내역이 없습니다';
+    list.appendChild(empty);
+    return;
+  }
+  filtered.forEach(function(q){
+    var row=document.createElement('div');
+    row.className='q-item'+(session.currentQ===q?' active':'');
+    // 북마크 별
+    var star=document.createElement('span');
+    star.className='q-item-bm'+(bm[q]?'':' hidden');
+    star.textContent='★';
+    // 텍스트
+    var txt=document.createElement('span');
+    txt.className='q-item-txt';
+    txt.textContent=q;
+    txt.onclick=function(){selectQ(q);};
+    // 삭제 버튼
+    var del=document.createElement('button');
+    del.className='q-item-del';
+    del.innerHTML='×';
+    del.title='삭제';
+    del.onclick=function(e){
+      e.stopPropagation();
+      var h=loadHistory().filter(function(item){return item!==q;});
+      localStorage.setItem(HISTORY_KEY,JSON.stringify(h));
+      var ca=loadCache();delete ca[q];
+      localStorage.setItem(CACHE_KEY,JSON.stringify(ca));
+      var bmData=loadBookmarks();delete bmData[q];
+      localStorage.setItem(BM_KEY,JSON.stringify(bmData));
+      if(session.currentQ===q){session={raw:null,maskedRaw:null,tm:{},history:[],currentQ:null};clearChat();}
+      renderQList(document.getElementById('qSrch').value);
+    };
+    row.appendChild(star);
+    row.appendChild(txt);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+function selectQ(q){
+  if(busy)return;
+  var cache=loadCache();
+  if(cache[q]){
+    var saved=cache[q];
+    // tm, history 딥카피로 정확히 복원
+    session={
+      raw:saved.sess.raw||null,
+      maskedRaw:saved.sess.maskedRaw||null,
+      tm:JSON.parse(JSON.stringify(saved.sess.tm||{})),
+      history:(saved.sess.history||[]).map(function(h){return{role:h.role,content:h.content};}),
+      currentQ:q
+    };
+    document.getElementById('chatArea').innerHTML=saved.chatHTML;
+    document.getElementById('inputHint').textContent='추가 질문을 입력하세요 (현재 조회 데이터 기반으로 계속 대화 가능)';
+    renderQList(document.getElementById('qSrch').value);
+    renderAnalysisChips();
+    scrollC();
+  }else{
+    session={raw:null,maskedRaw:null,tm:{},history:[],currentQ:q};
+    clearChat();
+    renderQList(document.getElementById('qSrch').value);
+    renderAnalysisChips();
+    startNewQ(q);
+  }
+}
+
+// ════════ 마스킹 ════════
+function vizMask(raw){
+  var tm={},text=raw,cCo=0,cAc=0,cCa=0;
+  text=text.replace(/(\d{4}[-]\d{4}[-]\d{4}[-]\d{4})|(\d{16})/g,function(m){
+    cCa++;var t='[CARD_'+String(cCa).padStart(3,'0')+']';tm[t]={val:m,type:'ca'};return t;
+  });
+  text=text.replace(/(\d{2,}[*]{2}\d{2,}[*]{2}\d+)|(\d{3,4}-\d{2,3}-\d{6,9})|(\d{3,4}-\d{6,9})|(\d{8,})/g,function(m){
+    if(/^20\d{2}[01]\d[0-3]\d$/.test(m))return m;
+    cAc++;var t='[ACCOUNT_'+String(cAc).padStart(3,'0')+']';tm[t]={val:m,type:'ac'};return t;
+  });
+  ['(주)쿠콘글로벌지점','주식회사 쿠콘','AI 테스용사업장','웹케시씨앤에스','웹케시테스트','법케시사업장','경리나라','씨앤에스'].forEach(function(n){
+    if(text.indexOf(n)>=0){cCo++;var t='[COMPANY_'+String(cCo).padStart(3,'0')+']';tm[t]={val:n,type:'co'};text=text.split(n).join(t);}
+  });
+  return{text:text,tm:tm,cnt:{co:cCo,ac:cAc,ca:cCa}};
+}
+function colorize(line,tm){
+  var s=line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  Object.keys(tm).forEach(function(t){
+    var c=tm[t].type==='co'?'t-co':tm[t].type==='ac'?'t-ac':'t-ca';
+    s=s.split(t).join('<span class="'+c+'">'+t+'</span>');
+  });
+  return '<span class="t-pl">'+s+'</span>';
+}
+function unmask(text,tm){var o=text;Object.keys(tm).forEach(function(t){o=o.split(t).join(tm[t].val);});return o;}
+
+// ════════ API ════════
+var SYS=`당신은 10년 이상 경력의 기업 재무 전문가이자 시니어 금융 AI 애널리스트입니다. CFO와 재무팀에게 보고하는 수준의 전문적이고 간결한 리포트를 작성합니다.
+
+## 절대 규칙
+- [COMPANY_001],[ACCOUNT_001],[CARD_001] 등 토큰은 절대 수정하거나 누락하지 마세요.
+- 인사말, 안내문구 없이 리포트 본문으로 바로 시작하세요.
+- "~것 같습니다", "~수도 있습니다" 등 애매한 표현 금지. 데이터 기반의 단정적 표현을 사용하세요.
+- "확인이 필요합니다" 대신 구체적 수치와 근거를 제시하세요.
+- 질문에 [COMPANY_001] 같은 토큰이 포함된 경우: 해당 토큰이 데이터에 존재하는 항목임을 전제하고 분석하세요. 토큰이 어떤 실제 값인지 모른다고 하지 마세요.
+- 예: "질문: [COMPANY_004]인것만 보여줘" → 데이터에서 [COMPANY_004]가 포함된 행만 필터링해서 보여주세요.
+
+## 숫자 처리 규칙 (필수)
+- 비교/필터/정렬 시 쉼표 제거 후 순수 숫자로 계산하세요.
+  예: "1,474.50" → 1474.50 / "1,700.84" → 1700.84
+- 합산, 증감률, 비중 계산을 적극 활용하세요.
+
+## 어투 기준
+- 격식체 사용: "~입니다", "~됩니다", "~확인됩니다"
+- 애매한 표현 금지: "~것 같습니다", "~수도 있습니다" → "~입니다", "~확인됩니다"
+- 수동적 표현 금지: "~해주세요" → "~권고합니다", "~필요합니다"
+- 수치는 반드시 단위 명시: 원, %, 건, 개
+- 전문 용어는 쉽게 풀어 쓰세요. 어려운 한자어나 영문 약어는 꼭 써야 할 경우 괄호로 설명을 덧붙이세요.
+  예: "유동성 리스크" → "당장 현금이 부족해질 위험", "매입채무" → "아직 갚지 않은 외상값(매입채무)"
+- 문장은 짧고 명확하게. 한 문장에 하나의 내용만 담으세요.
+
+## 리포트 구조 (반드시 준수)
+# 핵심 요약
+- 3줄 이내로 가장 중요한 수치와 시사점만 압축
+- 주요 수치는 **굵게** 표시
+- 리스크나 주의사항은 > 인용구로 표시
+
+## 데이터 분석
+- 데이터는 반드시 마크다운 파이프 테이블로 시각화
+- 테이블에 합계행, 비중(%), 증감 컬럼을 추가해 인사이트 강화
+- 단순 나열 금지 — 패턴, 집중도, 이상치를 해석하여 서술
+
+## 주목 포인트
+- 리스크, 기회, 즉시 조치 필요 사항을 번호 목록으로 명시
+- 각 항목마다 근거 수치를 반드시 포함
+
+## 표기 규칙
+- 금액: 1,234,567원 (단위 항상 표기)
+- 날짜: 20260313 → 2026년 03월 13일
+- 비율: 소수점 1자리까지 (예: 32.4%)
+- 외화: USD 1,474.50 / EUR 1,700.84 형식
+
+## 추가 질문 처리 규칙
+추가 질문을 받으면 먼저 아래 기준으로 판단하세요:
+
+REFETCH 조건 (새 데이터 조회 필요):
+- 오늘/현재/최신 등 실시간 정보 요청
+- 기존 조회 데이터에 없는 새 계좌/기간/항목 요청
+→ 이 경우 답변 맨 앞에 "[[REFETCH]]" 를 출력하고, 재조회가 필요한 이유 한 줄만 작성
+
+GENERAL 조건 (금융 무관 질문):
+- 날씨, 스포츠, 일상 대화 등
+→ 이 경우 답변 맨 앞에 "[[GENERAL]]" 을 출력하고 일반 답변 작성
+
+그 외 (기존 데이터로 답변 가능):
+- 필터링, 계산, 비교, 정렬, 분석 등
+→ "[[REUSE]]" 를 출력하고 바로 리포트 작성
+
+## 리포트 끝 메타 출력 (절대 생략 불가)
+리포트 본문이 끝난 직후 반드시 아래 형식으로 출력하세요.
+
+---META---
+{"summary":["핵심수치1","핵심수치2","핵심수치3"],"alerts":[],"suggestions":["추천질문1","추천질문2","추천질문3"],"chart":{"type":"bar","title":"차트제목","labels":["항목1","항목2"],"values":[숫자1,숫자2],"unit":"원"}}
+
+각 필드 규칙:
+- summary: 가장 중요한 수치 3개. 예: "총 잔액 12.7억원", "활성계좌 8개"
+- alerts: 잔액 0원, 만기 임박(90일), 급격한 변동 등 이상 항목. 없으면 []
+- suggestions: 이 데이터 기반으로 바로 이어 물어볼 질문 3개
+- chart: 숫자 데이터가 있으면 반드시 포함 (null 금지)
+  * type: "bar"(금액비교) | "doughnut"(비중/구성) | "line"(시계열추이)
+  * title: 차트 제목 (예: "계좌별 잔액 비교", "통화별 비중")
+  * labels: 항목명 배열 — 반드시 토큰([COMPANY_001],[ACCOUNT_001] 등) 그대로 사용
+  * values: 숫자 배열 (쉼표 없는 순수 숫자, 예: [8000000000, 2750000000])
+  * unit: "원" | "USD" | "건" 등
+  예시: {"type":"bar","title":"회사별 총잔액","labels":["[COMPANY_001]","[COMPANY_002]"],"values":[8000000000,127540000],"unit":"원"}`;
+
+var INTENT_SYS=`금융 AI 어시스턴트의 추가질문 의도를 판단합니다.
+세 가지 중 하나로 분류하세요:
+
+REUSE: 기존 조회된 금융 데이터로 답변 가능한 질문 (계산, 비교, 필터, 분석 등)
+REFETCH: 새로운 실시간 금융 데이터가 필요한 질문 (최신 거래내역, 오늘 환율, 새 계좌 조회 등)
+GENERAL: 금융 데이터와 무관한 일반 질문 (날씨, 스포츠, 일상 대화, 상식, 계산 등)
+
+반드시 JSON만 반환:
+{"intent":"REUSE"}
+{"intent":"REFETCH","reason":"이유"}
+{"intent":"GENERAL"}`;
+
+async function callAPI(messages,sys){
+  var k=getKey();if(!k)throw new Error('API 키 없음');
+  var r=await fetch('/api/chat',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-API-Key':k},
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2500,system:sys,messages:messages})
+  });
+  if(!r.ok){var e=await r.json();throw new Error(r.status===401?'API 키가 올바르지 않습니다':'API 오류: '+(e.error||r.statusText));}
+  var d=await r.json();return d.content[0].text;
+}
+async function callGeneralAPI(q){
+  var k=getKey();if(!k)throw new Error('API 키 없음');
+  var r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({
+      model:'claude-haiku-4-5-20251001',
+      max_tokens:1500,
+      system:`당신은 SecureAgent의 AI 어시스턴트입니다.
+금융 데이터 분석이 주 역할이지만, 일반 질문에도 친절하게 답변합니다.
+
+## 실시간 정보 처리 규칙
+오늘 날씨, 실시간 스포츠 결과, 최신 뉴스, 현재 주가 등 실시간 정보를 요청받으면:
+1. "실시간 정보는 제공이 어렵습니다"라고 간결하게 먼저 안내
+2. 확인할 수 있는 방법 2~3가지만 짧게 제시 (길게 나열 금지)
+3. 알고 있는 관련 배경 지식이 있으면 한 줄로 덧붙이기
+
+## 일반 답변 규칙
+- 마크다운으로 읽기 좋게 작성
+- 핵심만 간결하게 (불필요한 나열 금지)
+- 친근하고 자연스러운 어투`,
+      messages:[{role:'user',content:q}]
+    })
+  });
+  if(!r.ok){var e=await r.json();throw new Error(r.status===401?'API 키가 올바르지 않습니다':'API 오류: '+((e.error&&e.error.message)||r.statusText));}
+  var d=await r.json();
+  return d.content.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('\n')||'답변을 생성할 수 없습니다.';
+}
+async function judgeIntent(q){
+  try{
+    var raw=await callAPI([{role:'user',content:'추가질문: '+q}],INTENT_SYS);
+    return JSON.parse(raw.replace(/```json|```/g,'').trim());
+  }catch(e){return{intent:'REUSE'};}
+}
+
+// ════════ UI 헬퍼 ════════
+function clearChat(){
+  document.getElementById('chatArea').innerHTML='<div class="chat-empty"><div class="chat-empty-ico"><svg viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg></div><div class="chat-empty-t">질문을 선택하거나 입력하세요</div><div class="chat-empty-d">왼쪽 목록에서 선택하거나<br>아래 입력창에 직접 질문하세요</div></div>';
+  turnCnt=0;
+}
+function removeEmpty(){var e=document.querySelector('.chat-empty');if(e)e.remove();}
+function scrollC(){var a=document.getElementById('chatArea');a.scrollTop=a.scrollHeight;}
+// 특정 요소의 맨 위가 보이도록 스크롤
+function scrollToEl(el){
+  if(!el)return;
+  var area=document.getElementById('chatArea');
+  // 요소의 chatArea 내 상대 위치 계산
+  var elTop=el.offsetTop;
+  var parent=el.offsetParent;
+  while(parent&&parent!==area){elTop+=parent.offsetTop;parent=parent.offsetParent;}
+  area.scrollTo({top:elTop-12,behavior:'smooth'});
+}
+function setBusy(b){document.getElementById('sendBtn').disabled=b;document.getElementById('chatTa').disabled=b;}
+function resetPipe(){['ps1','ps2','ps3','ps4'].forEach(function(id){document.getElementById(id).className='ps';});}
+function pipeA(id){document.getElementById(id).className='ps active';}
+function pipeD(id){document.getElementById(id).className='ps done';}
+
+function addBubble(q,isFollow){
+  removeEmpty();
+  var d=document.createElement('div');
+  d.className='chat-q'+(isFollow?' followup':'');
+  d.textContent=q;
+  document.getElementById('chatArea').appendChild(d);
+  scrollC();
+}
+function addIntentBadge(intent){
+  var d=document.createElement('div');
+  if(intent==='REUSE')
+    d.innerHTML='<div class="intent-badge reuse">✓ 기존 데이터 재사용 · DB 재조회 불필요</div>';
+  else if(intent==='GENERAL')
+    d.innerHTML='<div class="intent-badge general">💬 일반 질문 · AI 자체 답변</div>';
+  else
+    d.innerHTML='<div class="intent-badge refetch">⚡ 실시간 데이터 필요 · 브랜치Q 재조회</div>';
+  document.getElementById('chatArea').appendChild(d);scrollC();
+}
+function addLoadingInline(msg){
+  var d=document.createElement('div');d.className='loading-inline';
+  d.innerHTML='<div class="spin-sm"></div>'+msg;
+  document.getElementById('chatArea').appendChild(d);scrollC();return d;
+}
+function addErr(msg){
+  var d=document.createElement('div');d.className='err-msg';d.textContent='오류: '+msg;
+  document.getElementById('chatArea').appendChild(d);scrollC();
+}
+
+function addTerminal(){
+  removeEmpty();
+  var b=document.createElement('div');b.className='terminal-box';
+  b.innerHTML='<div class="terminal-hdr"><div class="terminal-title"><div class="t-blink"></div>SecureAgent 보안 처리 중</div><div class="terminal-phase" id="tPhase"><b>STEP 1</b> · 마스킹 중...</div></div><div class="terminal-body" id="tBody"></div><div class="terminal-footer"><div class="mask-stat"><div class="msd co"></div><span class="msv" id="tCo">0</span><span class="msl">회사명</span></div><div class="mask-stat"><div class="msd ac"></div><span class="msv" id="tAc">0</span><span class="msl">계좌번호</span></div><div class="mask-stat"><div class="msd ca"></div><span class="msv" id="tCa">0</span><span class="msl">카드번호</span></div><div class="mask-wait" id="tWait" style="visibility:hidden">AI 분석 중<span class="mask-dots"><span>.</span><span>.</span><span>.</span></span></div></div>';
+  document.getElementById('chatArea').appendChild(b);scrollC();return b;
+}
+
+// ════════ 메타 파싱 ════════
+// ════════ 복수 후보 선택 UI ════════
+function showCandidates(originalQ, candidates){
+  removeEmpty();
+  var wrap=document.createElement('div');
+  wrap.className='candidate-wrap';
+  var msg=document.createElement('div');
+  msg.className='candidate-msg';
+  msg.textContent='아래 업체 중 어느 곳을 조회할까요?';
+  wrap.appendChild(msg);
+  var btns=document.createElement('div');
+  btns.className='candidate-btns';
+  candidates.forEach(function(m){
+    var btn=document.createElement('button');
+    btn.className='candidate-btn';
+    btn.textContent=m.val;
+    btn.onclick=function(){
+      wrap.remove();
+      // 선택된 회사명으로 질문 재실행
+      var newQ=originalQ.replace(
+        new RegExp(originalQ.match(/[가-힣a-zA-Z0-9(주)]+/g)
+          .find(function(w){return m.val.includes(w)||w.includes(m.val.substring(0,2));})||'__NONE__','g'),
+        m.val
+      );
+      sendFollowup(newQ||m.val+' '+originalQ);
+    };
+    btns.appendChild(btn);
+  });
+  wrap.appendChild(btns);
+  document.getElementById('chatArea').appendChild(wrap);
+  scrollToEl(wrap);
+}
+
+// ════════ 차트 렌더링 ════════
+var chartInstances={};
+function renderChart(tid, chartData, tm){
+  if(!chartData||!chartData.type||!chartData.labels||!chartData.values)return;
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+
+  // labels 역마스킹 — 토큰을 실제 값으로 복원
+  var labels=chartData.labels.map(function(lbl){
+    var out=lbl;
+    if(tm){Object.keys(tm).forEach(function(tok){out=out.split(tok).join(tm[tok].val);});}
+    // 긴 텍스트 줄임
+    return out.length>10?out.substring(0,9)+'…':out;
+  });
+
+  var values=chartData.values.map(function(v){return typeof v==='string'?parseFloat(v.replace(/,/g,''))||0:v;});
+  var unit=chartData.unit||'';
+  var type=chartData.type;
+
+  // 색상 팔레트
+  var palette=['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
+  var textColor=isDark?'rgba(255,255,255,0.6)':'rgba(0,0,0,0.55)';
+  var gridColor=isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)';
+
+  var canvasId='chart-'+tid;
+  var canvas=document.getElementById(canvasId);
+  if(!canvas)return;
+
+  // 기존 인스턴스 제거
+  if(chartInstances[tid]){chartInstances[tid].destroy();delete chartInstances[tid];}
+
+  var config;
+  if(type==='bar'){
+    config={
+      type:'bar',
+      data:{
+        labels:labels,
+        datasets:[{
+          data:values,
+          backgroundColor:palette.map(function(p){return p+'CC';}),
+          borderColor:palette,
+          borderWidth:1.5,
+          borderRadius:5
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.parsed.y.toLocaleString()+unit;}}}},
+        scales:{
+          x:{ticks:{color:textColor,font:{size:11}},grid:{display:false}},
+          y:{ticks:{color:textColor,font:{size:10},callback:function(v){
+            if(Math.abs(v)>=100000000)return(v/100000000).toFixed(0)+'억';
+            if(Math.abs(v)>=10000)return(v/10000).toFixed(0)+'만';
+            return v.toLocaleString();
+          }},grid:{color:gridColor}}
+        }
+      }
+    };
+  }else if(type==='doughnut'){
+    config={
+      type:'doughnut',
+      data:{labels:labels,datasets:[{data:values,backgroundColor:palette,borderWidth:2,borderColor:isDark?'#111E33':'#ffffff',hoverOffset:6}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,cutout:'62%',
+        plugins:{
+          legend:{position:'right',labels:{color:textColor,font:{size:11},boxWidth:12,padding:10}},
+          tooltip:{callbacks:{label:function(ctx){
+            var total=ctx.dataset.data.reduce(function(a,b){return a+b;},0);
+            var pct=total>0?(ctx.parsed/total*100).toFixed(1):'0';
+            return' '+ctx.parsed.toLocaleString()+unit+' ('+pct+'%)';
+          }}}
+        }
+      }
+    };
+  }else if(type==='line'){
+    config={
+      type:'line',
+      data:{labels:labels,datasets:[{data:values,borderColor:'#3B82F6',backgroundColor:'rgba(59,130,246,0.1)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#3B82F6',tension:0.3,fill:true}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.parsed.y.toLocaleString()+unit;}}}},
+        scales:{
+          x:{ticks:{color:textColor,font:{size:11}},grid:{color:gridColor}},
+          y:{ticks:{color:textColor,font:{size:10},callback:function(v){
+            if(Math.abs(v)>=100000000)return(v/100000000).toFixed(0)+'억';
+            if(Math.abs(v)>=10000)return(v/10000).toFixed(0)+'만';
+            return v.toLocaleString();
+          }},grid:{color:gridColor}}
+        }
+      }
+    };
+  }
+
+  chartInstances[tid]=new Chart(canvas,config);
+}
+
+// ════════ 유사 텍스트 마스킹 (오타 허용) ════════
+// fuzzyMaskQ: 정확/유사/부분 매칭 순서로 치환
+// 반환: {masked: 치환된 질문, candidates: 복수 후보 배열(부분매칭 2개 이상일 때)}
+function fuzzyMaskQ(q, tm){
+  var result = q;
+  var alreadyMatched = []; // 이미 치환된 토큰
+
+  // 1단계: 정확 매칭 + 유사 매칭(모음 정규화)
+  Object.keys(tm).forEach(function(tok){
+    if(alreadyMatched.indexOf(tok) >= 0) return;
+    var val = tm[tok].val;
+    if(result.indexOf(val) >= 0){
+      result = result.split(val).join(tok);
+      alreadyMatched.push(tok);
+      return;
+    }
+    var valNorm = normalizeKo(val);
+    var qNorm = normalizeKo(result);
+    if(qNorm.indexOf(valNorm) >= 0){
+      var idx = qNorm.indexOf(valNorm);
+      result = result.substring(0, idx) + tok + result.substring(idx + val.length);
+      alreadyMatched.push(tok);
+    }
+  });
+
+  // 2단계: 아직 치환 안 된 단어가 있으면 부분 매칭 시도
+  // 질문에서 토큰으로 안 바뀐 한글 단어 추출
+  var words = result.split(/[\s,./·]/);
+  var candidates = [];
+
+  words.forEach(function(word){
+    if(!word || word.length < 2) return;
+    if(/^\[.*\]$/.test(word)) return; // 이미 토큰
+    // 이 단어가 포함된 회사명 후보 찾기
+    var matches = [];
+    Object.keys(tm).forEach(function(tok){
+      if(tm[tok].type !== 'co') return;
+      var val = tm[tok].val;
+      var wordNorm = normalizeKo(word);
+      var valNorm = normalizeKo(val);
+      if(valNorm.indexOf(wordNorm) >= 0){
+        matches.push({tok:tok, val:val});
+      }
+    });
+    if(matches.length === 1){
+      // 딱 1개 매칭 → 자동 치환
+      result = result.split(word).join(matches[0].tok);
+      alreadyMatched.push(matches[0].tok);
+    } else if(matches.length >= 2){
+      // 복수 후보 → 사용자에게 물어볼 후보 목록 저장
+      candidates = candidates.concat(matches.filter(function(m){
+        return candidates.indexOf(m) < 0;
+      }));
+    }
+  });
+
+  return {masked: result, candidates: candidates};
+}
+// 한글 모음 정규화: 비슷한 모음을 동일 문자로 통일
+function normalizeKo(s){
+  return s
+    .replace(/[앤엔]/g, 'ㅔ')
+    .replace(/[애에]/g, 'ㅔ')
+    .replace(/[왜웨외]/g, 'ㅚ')
+    .replace(/[의이]/g, 'ㅣ')
+    .replace(/[아야]/g, 'ㅏ')
+    .replace(/[오요]/g, 'ㅗ')
+    .replace(/[우유]/g, 'ㅜ');
+}
+
+function parseMeta(raw){
+  try{
+    var idx=raw.indexOf('---META---');
+    if(idx<0)return{body:raw,meta:null};
+    var body=raw.substring(0,idx).trim();
+    var jsonStr=raw.substring(idx+10).trim();
+    var meta=JSON.parse(jsonStr);
+    return{body:body,meta:meta};
+  }catch(e){return{body:raw,meta:null};}
+}
+
+// ════════ 북마크 저장 ════════
+var BM_KEY='sa_bookmarks';
+function loadBookmarks(){try{return JSON.parse(localStorage.getItem(BM_KEY)||'{}');}catch(e){return{};}}
+function toggleBookmark(tid,btn){
+  var q=session.currentQ||'';
+  if(!q)return;
+  var bm=loadBookmarks();
+  if(bm[q]&&bm[q].tid===tid){
+    // 해제
+    delete bm[q];
+    btn.classList.remove('bookmarked');
+    btn.title='북마크';
+  }else{
+    // 설정
+    bm[q]={ts:Date.now(),tid:tid};
+    btn.classList.add('bookmarked');
+    btn.title='북마크 해제';
+  }
+  localStorage.setItem(BM_KEY,JSON.stringify(bm));
+  renderBmList();
+  renderQList(document.getElementById('qSrch').value);
+}
+function toggleMemo(tid){
+  var ma=document.getElementById('memo'+tid);
+  ma.classList.toggle('open');
+  if(ma.classList.contains('open'))document.getElementById('memota'+tid).focus();
+}
+function saveMemo(tid){
+  var val=document.getElementById('memota'+tid).value.trim();
+  var q=session.currentQ||'';
+  var bm=loadBookmarks();
+  if(!bm[q])bm[q]={ts:Date.now(),tid:tid};
+  bm[q].memo=val;
+  localStorage.setItem(BM_KEY,JSON.stringify(bm));
+  renderBmList();
+  var saved=document.getElementById('memosaved'+tid);
+  saved.style.display='block';setTimeout(function(){saved.style.display='none';},1500);
+}
+
+function addReportCard(q,answer,tm,mc,tid){
+  var n=new Date(),ts=n.getFullYear()+'.'+p2(n.getMonth()+1)+'.'+p2(n.getDate())+' '+p2(n.getHours())+':'+p2(n.getMinutes());
+  var tags='';
+  if(mc.co)tags+='<span class="rtag co">회사명 '+mc.co+'건</span>';
+  if(mc.ac)tags+='<span class="rtag ac">계좌 '+mc.ac+'건</span>';
+  if(mc.ca)tags+='<span class="rtag ca">카드 '+mc.ca+'건</span>';
+
+  // 메타 파싱
+  var parsed=parseMeta(answer);
+  var body=parsed.body;
+  var meta=parsed.meta;
+
+  // ① 한 줄 요약 배지 HTML
+  var summaryHtml='';
+  if(meta&&meta.summary&&meta.summary.length>0){
+    var badges=meta.summary.map(function(s){return'<span class="sb-item info">'+esc(s)+'</span>';}).join('');
+    summaryHtml='<div class="summary-badge">'+badges+'</div>';
+  }
+
+  // ② 이상 감지 경고 배지 HTML
+  var alertHtml='';
+  if(meta&&meta.alerts&&meta.alerts.length>0){
+    var achips=meta.alerts.map(function(a){return'<span class="alert-chip">⚠ '+esc(a)+'</span>';}).join('');
+    alertHtml='<div class="alert-strip"><svg viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg><div class="alert-items">'+achips+'</div></div>';
+  }
+
+  // ② 차트 HTML
+  var chartHtml='';
+  if(meta&&meta.chart){
+    var ch=meta.chart;
+    var wrapClass='chart-canvas-wrap '+(ch.type||'bar');
+    chartHtml='<div class="chart-wrap">'
+      +'<div class="chart-title"><span class="chart-title-ico">📊</span>'+(ch.title||'데이터 시각화')+'</div>'
+      +'<div class="'+wrapClass+'"><canvas id="chart-'+tid+'"></canvas></div>'
+      +'</div>';
+  }
+
+  // ③ 추천 질문 HTML
+  var suggestHtml='';
+  if(meta&&meta.suggestions&&meta.suggestions.length>0){
+    var schips=meta.suggestions.map(function(s){
+      return'<button class="suggest-chip" onclick="useSuggest(\''+s.replace(/'/g,"\\'")+'\')" >'+esc(s)+'</button>';
+    }).join('');
+    suggestHtml='<div class="suggest-wrap"><div class="suggest-lbl">이어서 물어보기</div><div class="suggest-chips">'+schips+'</div></div>';
+  }
+
+  var c=document.createElement('div');c.className='report-card';
+  c.innerHTML=
+    '<div class="report-hdr">'+
+      '<div class="ai-mark"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg></div>'+
+      '<div><div class="ai-name">SecureAgent AI</div><div class="ai-sub">'+esc(q)+'</div></div>'+
+      '<div class="card-actions">'+
+        // ⑤ PDF/Excel 버튼
+        '<button class="export-btn" onclick="exportPDF('+tid+')" title="PDF 저장"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>PDF</button>'+
+        '<button class="export-btn" onclick="exportCSV('+tid+')" title="CSV 저장"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75.125V14.25m0 5.25H4.5m14.625 0h-1.5c-.621 0-1.125-.504-1.125-1.125M18.375 19.5h1.5v-5.25m0 0V6.375a1.125 1.125 0 00-1.125-1.125H5.25A1.125 1.125 0 004.125 6.375v7.875m14.25 0H4.125"/></svg>CSV</button>'+
+        // ④ 북마크/메모 버튼
+        '<button class="card-btn" id="bmbtn'+tid+'" onclick="toggleBookmark('+tid+',this)" title="북마크"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"/></svg></button>'+
+        '<button class="card-btn" onclick="toggleMemo('+tid+')" title="메모"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg></button>'+
+      '</div>'+
+      '<div class="ai-ts">'+ts+'</div>'+
+    '</div>'+
+    summaryHtml+
+    alertHtml+
+    (tags?'<div class="report-tags">'+tags+'</div>':'')+
+    '<div class="report-body"><div class="md-content" id="rc'+tid+'"></div></div>'+
+    chartHtml+
+    '<div class="memo-area" id="memo'+tid+'">'+
+      '<textarea class="memo-ta" id="memota'+tid+'" placeholder="이 리포트에 메모를 남기세요..."></textarea>'+
+      '<button class="memo-save-btn" onclick="saveMemo('+tid+')">저장</button>'+
+      '<div class="memo-saved" id="memosaved'+tid+'">✓ 저장됨</div>'+
+    '</div>'+
+    suggestHtml+
+    '<div class="proc-panel hidden" id="pp'+tid+'"><div class="proc-toggle" id="pt'+tid+'" onclick="toggleProc('+tid+')"><div class="proc-toggle-l"><span class="proc-lbl">생성 과정</span><span class="proc-badge" id="pb_cnt'+tid+'">0건</span></div><svg class="chevron" id="chev'+tid+'" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></div><div class="proc-body" id="pbd'+tid+'"><div class="proc-section"><div class="proc-sec-t mask"><span class="sp">STEP 1</span>마스킹</div><table class="proc-tbl"><thead><tr><th>유형</th><th>원본</th><th></th><th>토큰</th></tr></thead><tbody id="pm'+tid+'"></tbody></table></div><div class="proc-section"><div class="proc-sec-t unmask"><span class="sp">STEP 3</span>역마스킹</div><table class="proc-tbl"><thead><tr><th>유형</th><th>토큰</th><th></th><th>복원</th></tr></thead><tbody id="pu'+tid+'"></tbody></table></div></div></div>';
+
+  document.getElementById('chatArea').appendChild(c);
+  document.getElementById('rc'+tid).innerHTML=renderMd(body);
+  // 차트 렌더링 (DOM 삽입 후 실행)
+  if(meta&&meta.chart){
+    setTimeout(function(){renderChart(tid,meta.chart,tm);},50);
+  }
+  scrollToEl(c);  // 새 카드 맨 위로 스크롤
+
+  // 기존 저장된 북마크/메모 복원 (q 기반)
+  var bm=loadBookmarks();
+  var curQ=session.currentQ||q;
+  if(bm[curQ]){
+    document.getElementById('bmbtn'+tid).classList.add('bookmarked');
+    document.getElementById('bmbtn'+tid).title='북마크 해제';
+    if(bm[curQ].memo)document.getElementById('memota'+tid).value=bm[curQ].memo;
+  }
+
+  if(tm&&Object.keys(tm).length>0){
+    var mr='',ur='';
+    Object.keys(tm).forEach(function(tok){
+      var i=tm[tok],cl=i.type==='co'?'co':i.type==='ac'?'ac':'ca';
+      var lb={co:'회사명',ac:'계좌번호',ca:'카드번호'}[cl];
+      mr+='<tr><td><span class="tok '+cl+'">'+lb+'</span></td><td><span class="realv">'+esc(i.val)+'</span></td><td class="tarr">→</td><td><span class="tok '+cl+'">'+esc(tok)+'</span></td></tr>';
+      ur+='<tr><td><span class="tok '+cl+'">'+lb+'</span></td><td><span class="tok '+cl+'">'+esc(tok)+'</span></td><td class="tarr">→</td><td><span class="realv">'+esc(i.val)+'</span></td></tr>';
+    });
+    document.getElementById('pm'+tid).innerHTML=mr;
+    document.getElementById('pu'+tid).innerHTML=ur;
+    document.getElementById('pb_cnt'+tid).textContent=Object.keys(tm).length+'건';
+    document.getElementById('pp'+tid).classList.remove('hidden');
+  }
+}
+function toggleProc(id){
+  var b=document.getElementById('pbd'+id),ch=document.getElementById('chev'+id),t=document.getElementById('pt'+id);
+  var o=b.classList.toggle('open');ch.classList.toggle('open',o);t.classList.toggle('open',o);
+}
+
+// ════════ 추천 질문 클릭 ════════
+function useSuggest(q){
+  var ta=document.getElementById('chatTa');
+  ta.value=q;autoResize(ta);ta.focus();
+}
+
+// ════════ PDF 내보내기 ════════
+function exportPDF(tid){
+  var card=document.getElementById('rc'+tid);
+  if(!card){alert('내용을 찾을 수 없습니다.');return;}
+  var w=window.open('','_blank');
+  var css='body{font-family:sans-serif;padding:32px;color:#1E293B;max-width:800px;margin:0 auto;font-size:14px;line-height:1.8;}h1{font-size:16px;font-weight:800;background:#0A1628;color:white;padding:10px 16px;border-radius:6px;margin:20px 0 10px;}h2{font-size:13px;font-weight:700;color:#2563EB;border-left:3px solid #2563EB;padding:3px 10px;background:#EFF6FF;margin:14px 0 8px;}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px;}thead{background:#0A1628;}thead th{color:rgba(255,255,255,.7);padding:6px 10px;text-align:left;font-size:11px;}tbody tr:nth-child(even){background:#F8FAFC;}tbody td{padding:5px 10px;border-bottom:1px solid #E2E8F0;}blockquote{border-left:3px solid #2563EB;margin:8px 0;padding:6px 12px;background:#EFF6FF;color:#475569;}strong{font-weight:800;}.header{display:flex;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:2px solid #0A1628;margin-bottom:20px;}.logo{font-size:20px;font-weight:900;}.ts{font-size:11px;color:#94A3B8;}';
+  var now=new Date();
+  var ts=now.getFullYear()+'.'+String(now.getMonth()+1).padStart(2,'0')+'.'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  var html='<html><head><meta charset="UTF-8"><title>SecureAgent 리포트</title><style>'+css+'</style></head><body>';
+  html+='<div class="header"><div class="logo">SecureAgent 리포트</div><div class="ts">'+ts+'</div></div>';
+  html+=card.innerHTML;
+  html+='</body></html>';
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function(){w.print();},400);
+}
+function exportCSV(tid){
+  var card=document.getElementById('rc'+tid);
+  if(!card){alert('내용을 찾을 수 없습니다.');return;}
+  var tables=card.querySelectorAll('table');
+  if(tables.length===0){alert('내보낼 표 데이터가 없습니다.');return;}
+  var csv='';
+  tables.forEach(function(tbl,ti){
+    if(ti>0)csv+='\n';
+    tbl.querySelectorAll('tr').forEach(function(row){
+      var cells=Array.from(row.querySelectorAll('th,td')).map(function(c){
+        var v=c.textContent.trim().replace(/"/g,'""');
+        return'"'+v+'"';
+      });
+      csv+=cells.join(',')+'\n';
+    });
+  });
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;
+  a.download='SecureAgent_'+tid+'_'+Date.now()+'.csv';
+  a.click();URL.revokeObjectURL(url);
+}
+
+// ════════ 첫 질문 (마스킹 시각화) ════════
+async function startNewQ(q){
+  if(busy)return;if(!getKey()){openKeyModal();return;}
+  var raw=SD[q];if(!raw){addErr('샘플 데이터 없음');return;}
+  busy=true;setBusy(true);resetPipe();turnCnt++;var tid=turnCnt;
+  // localStorage 히스토리에 저장 + 왼쪽 목록 갱신
+  saveToHistory(q);
+  renderQList(document.getElementById('qSrch').value);
+  renderAnalysisChips();
+  addBubble(q,false);
+  var terminal=addTerminal();
+  pipeA('ps1');
+
+  var r=vizMask(raw);
+  session={raw:raw,maskedRaw:r.text,tm:r.tm,history:[],currentQ:q};
+  var lines=raw.split('\n').filter(function(l){return l.trim();});
+  var mlines=r.text.split('\n').filter(function(l){return l.trim();});
+  var tBody=document.getElementById('tBody');
+  var rCo=0,rAc=0,rCa=0;
+
+  for(var i=0;i<lines.length;i++){
+    var dv=document.createElement('div');dv.className='mask-line';
+    dv.innerHTML=colorize(mlines[i]||lines[i],r.tm);
+    tBody.appendChild(dv);await sleep(8);dv.classList.add('show');
+    var ml=mlines[i]||'';var fC=0,fA=0,fCa=0;
+    Object.keys(r.tm).forEach(function(t){
+      if(ml.indexOf(t)>=0){if(r.tm[t].type==='co')fC++;else if(r.tm[t].type==='ac')fA++;else fCa++;}
+    });
+    if(fC||fA||fCa){rCo+=fC;rAc+=fA;rCa+=fCa;
+      document.getElementById('tCo').textContent=String(rCo);
+      document.getElementById('tAc').textContent=String(rAc);
+      document.getElementById('tCa').textContent=String(rCa);
+      await sleep(70);
+    }else{await sleep(40);}
+    scrollC();
+  }
+  pipeD('ps1');await sleep(120);
+
+  var s1=document.createElement('div');s1.className='mask-line';s1.innerHTML='<span class="t-sep">────────────────────────────────</span>';
+  tBody.appendChild(s1);await sleep(20);s1.classList.add('show');
+  var sv=document.createElement('div');sv.className='mask-line';
+  sv.innerHTML='<span class="t-send">▶ 마스킹 완료 (CO:'+rCo+' AC:'+rAc+' CA:'+rCa+') → Claude AI 전송...</span>';
+  tBody.appendChild(sv);await sleep(20);sv.classList.add('show');
+
+  document.getElementById('tPhase').innerHTML='<b>STEP 2</b> · Claude AI 분석 중...';
+  document.getElementById('tWait').style.visibility='visible';
+  pipeA('ps2');
+
+  try{
+    // 질문도 마스킹해서 전달 — 원본값이 Claude에게 절대 노출되지 않도록
+    var maskedQ=fuzzyMaskQ(q, r.tm).masked;
+    var uMsg='질문: '+maskedQ+'\n\n데이터:\n'+r.text;
+    var ans=await callAPI([{role:'user',content:uMsg}],SYS);
+    session.history.push({role:'user',content:uMsg});
+    session.history.push({role:'assistant',content:ans});
+
+    pipeD('ps2');document.getElementById('tWait').style.visibility='hidden';
+    document.getElementById('tPhase').innerHTML='<b>STEP 3</b> · 역마스킹 중...';
+    pipeA('ps3');
+
+    var s2=document.createElement('div');s2.className='mask-line';s2.innerHTML='<span class="t-sep">────────────────────────────────</span>';
+    tBody.appendChild(s2);await sleep(20);s2.classList.add('show');
+    var rv=document.createElement('div');rv.className='mask-line';rv.innerHTML='<span class="t-recv">◀ 응답 수신 → 역마스킹 시작...</span>';
+    tBody.appendChild(rv);await sleep(20);rv.classList.add('show');await sleep(180);
+
+    var final=ans;
+    var tkeys=Object.keys(r.tm);
+    for(var j=0;j<tkeys.length;j++){
+      var tok=tkeys[j],info=r.tm[tok];
+      var cls2=info.type==='co'?'t-co':info.type==='ac'?'t-ac':'t-ca';
+      final=final.split(tok).join(info.val);
+      var rl=document.createElement('div');rl.className='mask-line';
+      rl.innerHTML='<span class="t-arrow">  </span><span class="'+cls2+'">'+esc(tok)+'</span><span class="t-arrow"> → </span><span class="t-real">'+esc(info.val)+'</span>';
+      tBody.appendChild(rl);await sleep(20);rl.classList.add('show');await sleep(80);scrollC();
+    }
+    var dn=document.createElement('div');dn.className='mask-line';dn.innerHTML='<span class="t-done">✓ 역마스킹 완료</span>';
+    tBody.appendChild(dn);await sleep(20);dn.classList.add('show');await sleep(350);
+    pipeD('ps3');pipeD('ps4');
+    document.getElementById('tPhase').innerHTML='<b style="color:#22D3A5">✓ DONE</b>';
+    await sleep(280);terminal.remove();
+    addReportCard(q,final,r.tm,{co:rCo,ac:rAc,ca:rCa},tid);
+    document.getElementById('inputHint').textContent='추가 질문을 입력하세요 (현재 조회 데이터 기반으로 계속 대화 가능)';
+    // 대화 내용 캐시 저장
+    saveCache(q, document.getElementById('chatArea').innerHTML, session);
+  }catch(e){terminal.remove();addErr(e.message);resetPipe();}
+  finally{busy=false;setBusy(false);}
+}
+
+// ════════ 추가 질문 (방법 C) ════════
+async function sendFollowup(q){
+  if(busy)return;if(!getKey()){openKeyModal();return;}
+  if(!session.raw){addErr('먼저 기본 질문을 선택해주세요');return;}
+  busy=true;setBusy(true);turnCnt++;var tid=turnCnt;
+  addBubble(q,true);
+  var ld=addLoadingInline('분석 중...');
+
+  try{
+    // 판단 + 답변을 1번 호출로 처리
+    var fmResult=fuzzyMaskQ(q, session.tm);
+    var maskedQ2=fmResult.masked;
+    var candidates=fmResult.candidates;
+
+    // 복수 후보가 있으면 사용자에게 선택 요청
+    if(candidates.length >= 2){
+      ld.remove();
+      showCandidates(q, candidates);
+      busy=false;setBusy(false);
+      return;
+    }
+
+    var rawData='';
+    if(session.history.length>0){
+      var h0=session.history[0].content;
+      var dataIdx=h0.indexOf('데이터:\n');
+      if(dataIdx>=0) rawData=h0.substring(dataIdx+4);
+    }
+    var freshMsg=rawData
+      ? '질문: '+maskedQ2+'\n\n데이터:\n'+rawData
+      : maskedQ2;
+
+    pipeA('ps2');
+    var ans=await callAPI([{role:'user',content:freshMsg}],SYS);
+    ld.remove();
+    pipeD('ps2');
+
+    // 응답 앞의 [[태그]] 파싱
+    var intent='REUSE';
+    var ansBody=ans;
+    var tagMatch=ans.match(/^\[\[(REFETCH|GENERAL|REUSE)\]\]/);
+    if(tagMatch){
+      intent=tagMatch[1];
+      ansBody=ans.substring(tagMatch[0].length).trim();
+    }
+
+    addIntentBadge(intent);
+
+    if(intent==='REFETCH'){
+      pipeD('ps3');pipeD('ps4');
+      var rc=document.createElement('div');rc.className='report-card';
+      rc.innerHTML='<div class="report-hdr"><div class="ai-mark"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg></div><div><div class="ai-name">SecureAgent AI</div><div class="ai-sub">실시간 데이터 필요</div></div></div><div class="report-body"><div class="md-content"><blockquote>실시간 데이터 조회가 필요한 질문입니다.<br>실서비스에서는 브랜치Q를 통해 최신 데이터를 재조회합니다.<br><strong>사유: '+ansBody+'</strong></blockquote></div></div>';
+      document.getElementById('chatArea').appendChild(rc);
+      scrollToEl(rc);
+    }else if(intent==='GENERAL'){
+      pipeD('ps3');pipeD('ps4');
+      var n=new Date(),ts=n.getFullYear()+'.'+p2(n.getMonth()+1)+'.'+p2(n.getDate())+' '+p2(n.getHours())+':'+p2(n.getMinutes());
+      var gc=document.createElement('div');gc.className='report-card';
+      gc.innerHTML='<div class="report-hdr"><div class="ai-mark general-mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg></div><div><div class="ai-name">SecureAgent AI</div><div class="ai-sub">일반 답변</div></div><div class="ai-ts">'+ts+'</div></div><div class="report-body"><div class="md-content" id="gc'+tid+'"></div></div>';
+      document.getElementById('chatArea').appendChild(gc);
+      document.getElementById('gc'+tid).innerHTML=renderMd(ansBody);
+      scrollToEl(gc);
+    }else{
+      pipeD('ps3');pipeD('ps4');
+      session.history.push({role:'user',content:maskedQ2});
+      session.history.push({role:'assistant',content:ans});
+      var final=unmask(ansBody,session.tm);
+      addReportCard(q,final,session.tm,{co:0,ac:0,ca:0},tid);
+    }
+    saveCache(session.currentQ, document.getElementById('chatArea').innerHTML, session);
+  }catch(e){if(ld.parentNode)ld.remove();addErr(e.message);resetPipe();}
+  finally{busy=false;setBusy(false);}
+}
+
+// ════════ 입력 처리 ════════
+function sendChat(){
+  var ta=document.getElementById('chatTa'),q=ta.value.trim();
+  if(!q||busy)return;
+  ta.value='';autoResize(ta);
+  if(SD[q]){
+    // SD 칩 질문 → 마스킹+LLM 파이프라인
+    session={raw:null,maskedRaw:null,tm:{},history:[],currentQ:q};clearChat();startNewQ(q);
+  }else if(session.raw){
+    // 금융 세션 있음 → followup (REUSE/REFETCH/GENERAL 판단)
+    sendFollowup(q);
+  }else{
+    // 금융 세션 없음 → 일반 질문으로 바로 처리
+    sendGeneralDirect(q);
+  }
+}
+
+// 세션 없이 일반 질문 처리
+async function sendGeneralDirect(q){
+  if(busy)return;if(!getKey()){openKeyModal();return;}
+  busy=true;setBusy(true);turnCnt++;var tid=turnCnt;
+  removeEmpty();
+  // 히스토리 저장 + 세션 currentQ 설정
+  session.currentQ=q;
+  saveToHistory(q);
+  renderQList(document.getElementById('qSrch').value);
+  addBubble(q,false);
+  var ld=addLoadingInline('답변 생성 중...');
+  try{
+    var ans=await callGeneralAPI(q);
+    ld.remove();
+    var n=new Date(),ts=n.getFullYear()+'.'+p2(n.getMonth()+1)+'.'+p2(n.getDate())+' '+p2(n.getHours())+':'+p2(n.getMinutes());
+    var gc=document.createElement('div');gc.className='report-card';
+    gc.innerHTML='<div class="report-hdr"><div class="ai-mark general-mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg></div><div><div class="ai-name">SecureAgent AI</div><div class="ai-sub">일반 답변</div></div><div class="ai-ts">'+ts+'</div></div><div class="report-body"><div class="md-content" id="gc'+tid+'"></div></div>';
+    document.getElementById('chatArea').appendChild(gc);
+    document.getElementById('gc'+tid).innerHTML=renderMd(ans);
+    scrollToEl(gc);
+    // 캐시 저장 (나중에 클릭 시 복원용)
+    saveCache(q, document.getElementById('chatArea').innerHTML, session);
+    renderQList(document.getElementById('qSrch').value);
+  }catch(e){if(ld.parentNode)ld.remove();addErr(e.message);}
+  finally{busy=false;setBusy(false);}
+}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
+
+// ════════ 마크다운 ════════
+function renderMd(t){
+  if(!t)return'';
+  t=t.replace(/((?:\|[^\n]+\|\n?)+)/g,function(blk){
+    var lines=blk.trim().split('\n').filter(function(l){return l.trim()&&l.includes('|');});
+    if(lines.length<2)return blk;
+    var html='<div class="tbl-wrap"><table>',hd=false;
+    lines.forEach(function(line,i){
+      if(/^\|[\s\-|:]+\|$/.test(line.trim())){hd=true;return;}
+      var cells=line.split('|').slice(1,-1).map(function(c){return c.trim();});
+      if(!hd&&i===0){html+='<thead><tr>'+cells.map(function(c){return'<th>'+c+'</th>';}).join('')+'</tr></thead><tbody>';}
+      else{html+='<tr>'+cells.map(function(c){return'<td>'+c+'</td>';}).join('')+'</tr>';}
+    });
+    return html+'</tbody></table></div>';
+  });
+  return t
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/gs,function(m){return'<ul>'+m+'</ul>';})
+    .replace(/---/g,'<hr>')
+    .replace(/\n{2,}/g,'</p><p>')
+    .replace(/\n/g,'<br>');
+}
+
+// ════════ 유틸 ════════
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function p2(n){return String(n).padStart(2,'0');}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+
+// ════════ 다크/라이트 모드 ════════
+function applyTheme(dark){
+  if(dark){
+    document.documentElement.setAttribute('data-theme','dark');
+    document.getElementById('themeIco').textContent='☀️';
+    document.getElementById('themeTxt').textContent='라이트 모드';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    document.getElementById('themeIco').textContent='🌙';
+    document.getElementById('themeTxt').textContent='다크 모드';
+  }
+  localStorage.setItem('sa_theme', dark?'dark':'light');
+  // 다크/라이트 전환 시 모든 차트 색상 갱신
+  setTimeout(function(){
+    Object.keys(chartInstances).forEach(function(tid){
+      var inst=chartInstances[tid];
+      if(inst&&inst.config&&inst.config._config){
+        inst.destroy();delete chartInstances[tid];
+      }
+    });
+  },50);
+}
+function toggleTheme(){
+  var isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  applyTheme(!isDark);
+}
+
+// ════════ 초기화 ════════
+window.addEventListener('load',function(){
+  var saved=localStorage.getItem('sa_theme');
+  applyTheme(saved==='dark');
+  updateKeyBtn();
+
+  // 캐시-히스토리 정합성 체크
+  // 캐시가 없는 히스토리 항목은 삭제 (Ctrl+Shift+R 등으로 캐시만 날아간 경우)
+  var history=loadHistory();
+  var cache=loadCache();
+  var synced=history.filter(function(q){return !!cache[q];});
+  if(synced.length!==history.length){
+    localStorage.setItem(HISTORY_KEY,JSON.stringify(synced));
+  }
+
+  // 기존 숫자 키 북마크 데이터 정리 (이전 버전 호환)
+  try{
+    var oldBm=JSON.parse(localStorage.getItem(BM_KEY)||'{}');
+    var cleaned={};
+    Object.keys(oldBm).forEach(function(k){
+      if(isNaN(k))cleaned[k]=oldBm[k]; // 문자열 키만 유지
+    });
+    localStorage.setItem(BM_KEY,JSON.stringify(cleaned));
+  }catch(e){}
+  // 서버에서 샘플 데이터 로드
+  loadSampleData().then(function(){
+    renderQList('');renderBmList();renderAnalysisChips();
+    if(!getKey())openKeyModal();
+  });
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!document.getElementById('keyOverlay').classList.contains('hidden'))saveKey();
+});
+</script>
+</body>
+</html>
