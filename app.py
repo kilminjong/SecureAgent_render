@@ -27,7 +27,11 @@ def chat():
     if not api_key or not api_key.startswith('sk-ant-'):
         return jsonify({'error': 'API 키가 올바르지 않습니다'}), 401
     try:
-        client = anthropic.Anthropic(api_key=api_key, proxies=None)
+        import httpx
+        client = anthropic.Anthropic(
+            api_key=api_key,
+            http_client=httpx.Client()
+        )
         msg = client.messages.create(
             model=data.get('model', 'claude-haiku-4-5-20251001'),
             max_tokens=data.get('max_tokens', 2500),
