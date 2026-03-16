@@ -55,12 +55,16 @@ def save_history():
     q = request.json.get('question', '').strip()
     if not q:
         return jsonify({'ok': False}), 400
-    existing = History.query.filter_by(question=q).first()
-    if existing:
-        db.session.delete(existing)
-    h = History(question=q)
-    db.session.add(h)
-    db.session.commit()
+    try:
+        existing = History.query.filter_by(question=q).first()
+        if existing:
+            db.session.delete(existing)
+            db.session.flush()
+        h = History(question=q)
+        db.session.add(h)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
     return jsonify({'ok': True})
 
 @app.route('/api/history/<path:question>', methods=['DELETE'])
