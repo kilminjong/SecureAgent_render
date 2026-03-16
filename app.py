@@ -145,7 +145,9 @@ def get_samples():
     items = SampleData.query.all()
     return jsonify({s.label: s.raw_data for s in items})
 
+# Render/gunicorn 환경에서도 DB 초기화 실행
+with app.app_context():
+    init_db(app)
+
 if __name__ == '__main__':
-    with app.app_context():
-        init_db(app)
     app.run(debug=True, port=5000)
